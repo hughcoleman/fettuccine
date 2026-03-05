@@ -2,5 +2,7 @@
 -- Root module: imports all submodules.
 import Groebner.Defs
 import Groebner.Criterion
-import Groebner.Algorithm
+import Groebner.CMvPolynomial
+import Groebner.CMonomialOrder
+import Groebner.CBuchberger
 import Groebner.Basic

@@ -48,7 +48,7 @@ Proof: `sPolynomial p q` is a linear combination of `p` and `q`, hence lies in `
 Since `G` is a Gröbner basis, `remainder_eq_zero_of_isGroebnerBasis` gives the result. -/
 theorem allSpolyRemaindersZero_of_isGroebnerBasis
     {G : List (MvPolynomial σ k)}
-    (hG : IsGroebnerBasis m (Ideal.span { g | g ∈ G }) G) :
+    (hG : IsGroebnerBasis m {g | g ∈ G} (Ideal.span { g | g ∈ G })) :
     AllSpolyRemaindersZero m G := by
   intro p hp q hq
   apply remainder_eq_zero_of_isGroebnerBasis m hG
@@ -79,37 +79,21 @@ induction hypothesis applies. -/
 theorem isGroebnerBasis_of_allSpolyRemaindersZero
     {G : List (MvPolynomial σ k)}
     (hS : AllSpolyRemaindersZero m G) :
-    IsGroebnerBasis m (Ideal.span { g | g ∈ G }) G := by
+    IsGroebnerBasis m {g | g ∈ G} (Ideal.span { g | g ∈ G }) := by
   constructor
   · intro g hg
     exact Ideal.subset_span hg
-  · intro f hf hfne
-    sorry
-    -- Deferred: degree induction on f ∈ Ideal.span G using sPolynomial_decomposition.
+  · sorry
+    -- Deferred: show Ideal.span (m.leadingTerm '' ↑(Ideal.span {g | g ∈ G}))
+    --         = Ideal.span (m.leadingTerm '' {g | g ∈ G})
+    -- using sPolynomial_decomposition and degree induction.
 
 /-- **Buchberger's Criterion** (biconditional): `G` is a Gröbner basis for `Ideal.span G`
 if and only if every S-polynomial `S(p, q)` for `p, q ∈ G` reduces to `0` modulo `G`. -/
 theorem buchberger_criterion {G : List (MvPolynomial σ k)} :
-    IsGroebnerBasis m (Ideal.span { g | g ∈ G }) G ↔
+    IsGroebnerBasis m {g | g ∈ G} (Ideal.span { g | g ∈ G }) ↔
     AllSpolyRemaindersZero m G :=
   ⟨allSpolyRemaindersZero_of_isGroebnerBasis m,
    isGroebnerBasis_of_allSpolyRemaindersZero m⟩
-
-/-! #### Simplification lemmas -/
-
-/-- `S(p, p)` always reduces to zero. -/
-theorem spoly_self_remainder_zero (G : List (MvPolynomial σ k)) (p : MvPolynomial σ k) :
-    remainder m G (m.sPolynomial p p) = 0 := by
-  simp [sPolynomial_self]
-
-/-- Antisymmetry: `S(p, q) = -S(q, p)`, so having zero remainder for `(p, q)` implies
-the same for `(q, p)`. -/
-theorem allSpolyRemaindersZero_symm
-    {G : List (MvPolynomial σ k)} (hS : AllSpolyRemaindersZero m G)
-    (p : MvPolynomial σ k) (hp : p ∈ G) (q : MvPolynomial σ k) (hq : q ∈ G) :
-    remainder m G (m.sPolynomial q p) = 0 := by
-  rw [sPolynomial_antisymm]
-  sorry
-  -- Follows from hS q hq p hp and the fact that remainder(-f) = -remainder(f) = 0.
 
 end MonomialOrder
