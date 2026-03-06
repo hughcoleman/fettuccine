@@ -1,5 +1,5 @@
-import Groebner.Criterion
-import Groebner.CBuchberger
+import Groebner.GroebnerBasis.Criterion
+import Groebner.GroebnerBasis.CBuchberger
 import Mathlib.Data.Finsupp.MonomialOrder.DegLex
 
 /-!
@@ -12,12 +12,15 @@ collects the main API items for easy reference.
 
 ```
 Groebner/
-  CMvPolynomial.lean  — CMonomial σ, CMvPolynomial σ R
-  CMonomialOrder.lean — CMonomialOrder, lex/grlex/grevlex, leadMon/leadCoeff/tail
-  CBuchberger.lean    — remainderPoly, sPolyPoly, buchberger, CGroebnerBasis
-  Defs.lean           — (noncomputable) remainder, IsGroebnerBasis
-  Criterion.lean      — (noncomputable) AllSpolyRemaindersZero, buchberger_criterion
-  Basic.lean          — this file: examples and API reference
+  GroebnerBasis/
+    CMvPolynomial/
+      CMvPolynomial.lean  — CMonomial, CMvPolynomial; CMonomial.toFinsupp, CMvPolynomial.toMvPolynomial
+      CMonomialOrder.lean — CMonomialOrder, lex/grlex/grevlex, leadMon/leadCoeff/tail
+    CBuchberger.lean      — remainderPoly, sPolyPoly, buchberger, IsCGroebnerBasis;
+                            CBuchberger.toMvPolynomial_sPolyPoly, CBuchberger.lmIdeal
+    Defs.lean             — (noncomputable) remainder, IsGroebnerBasis
+    Criterion.lean        — (noncomputable) AllSpolyRemaindersZero, buchberger_criterion
+  Basic.lean              — this file: examples and API reference
 ```
 -/
 
@@ -44,10 +47,10 @@ open MvPolynomial MonomialOrder CBuchberger
   `MonomialOrder.buchberger_criterion m`
     `IsGroebnerBasis m (Ideal.span G) G ↔ AllSpolyRemaindersZero m G`
 
-### Computable side (`Groebner.CMvPolynomial`, `Groebner.CMonomialOrder`, `Groebner.CBuchberger`)
+### Computable side (`Groebner.GroebnerBasis.CMvPolynomial.CMvPolynomial`, `…CMonomialOrder`, `…CBuchberger`)
 
   `CMvPolynomial σ R`
-    A multivariate polynomial over a `Field R` with variables in `σ`.
+    A multivariate polynomial over a `CommRing R` with variables in `σ`.
     Use `+`, `-`, `*`, scalar `c * p` directly; construct with `ofVar`, `ofConst`, etc.
 
   `CMonomialOrder σ`
@@ -69,22 +72,22 @@ open MvPolynomial MonomialOrder CBuchberger
 
   To connect the two worlds we need:
 
-    `embed : CMvPolynomial (Fin n) ℚ → MvPolynomial (Fin n) ℚ`
+    `CMvPolynomial.toMvPolynomial : CMvPolynomial (Fin n) ℚ → MvPolynomial (Fin n) ℚ`
     `IsCGroebnerBasis_iff (m : MonomialOrder (Fin n)) (G : List (CMvPolynomial (Fin n) ℚ)) :
       IsCGroebnerBasis computableOrd G ↔
-      AllSpolyRemaindersZero m (G.map embed)`
+      AllSpolyRemaindersZero m (G.map CMvPolynomial.toMvPolynomial)`
 
   With this, certifying a concrete basis uses three lines:
 
-    have hc  : IsCGroebnerBasis computableOrd G      := by decide
-    have hS  : AllSpolyRemaindersZero m (G.map embed) := (iff.mp hc)
+    have hc  : IsCGroebnerBasis computableOrd G                            := by decide
+    have hS  : AllSpolyRemaindersZero m (G.map CMvPolynomial.toMvPolynomial) := (iff.mp hc)
     exact (buchberger_criterion m).mpr hS
 
 ### Sorry inventory (priority order)
 
-  1. `remainder` termination (Defs.lean) — lex decrease on (degree, support.card)
-  2. Hard direction of `buchberger_criterion` (Criterion.lean)
-  3. `remainder_nil`, `remainder_sub_mem_span` (Defs.lean) — degree induction
+  1. `remainder` termination (GroebnerBasis/Defs.lean) — lex decrease on (degree, support.card)
+  2. Hard direction of `buchberger_criterion` (GroebnerBasis/Criterion.lean)
+  3. `remainder_nil`, `remainder_sub_mem_span` (GroebnerBasis/Defs.lean) — degree induction
 -/
 
 /-! ## Computable example -/

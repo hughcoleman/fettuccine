@@ -25,7 +25,7 @@ with a degree induction.  We defer this direction via `sorry`.
 * [Becker-Weispfenning1993] §5.5 Theorem 5.64
 -/
 
-import Groebner.Defs
+import Groebner.GroebnerBasis.Defs
 
 open MvPolynomial
 

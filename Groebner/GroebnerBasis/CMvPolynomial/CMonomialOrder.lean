@@ -1,4 +1,4 @@
-import Groebner.CMvPolynomial
+import Groebner.GroebnerBasis.CMvPolynomial.CMvPolynomial
 
 /-!
 # Computable Monomial Orders
@@ -131,7 +131,7 @@ end CMonomialOrder
 namespace CMvPolynomial
 
 variable {σ : Type*} [DecidableEq σ] [LinearOrder σ]
-variable {R : Type*} [Field R] [DecidableEq R]
+variable {R : Type*} [CommRing R] [DecidableEq R]
 
 /-- The leading monomial of `p` with respect to `ord`, if `p ≠ 0`. -/
 def leadMon (ord : CMonomialOrder σ) (p : CMvPolynomial σ R) : Option (CMonomial σ) :=

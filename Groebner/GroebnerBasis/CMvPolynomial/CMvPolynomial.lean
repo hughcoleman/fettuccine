@@ -1,11 +1,12 @@
 import Mathlib.Algebra.Field.Basic
+import Mathlib.RingTheory.MvPolynomial.Groebner
 
 /-!
 # Computable Monomials and Multivariate Polynomials
 
 This file defines two computable types:
 - `CMonomial σ` — a monomial in variables of type `σ`
-- `CMvPolynomial σ R` — a multivariate polynomial over a field `R`
+- `CMvPolynomial σ R` — a multivariate polynomial over a commutative semiring `R`
 
 Both types are initially **reducible** (so all internal helpers can use list
 operations directly) and then sealed as `@[irreducible]` at the end of the file,
@@ -18,6 +19,12 @@ making their `List`-based representation opaque to importing modules.
 * `CMvPolynomial σ R = List (CMonomial σ × R)` — no duplicate monomials;
   no zero coefficients; terms stored in unspecified order.
   (Ordering is the responsibility of `CMonomialOrder`.)
+
+## Bridge to Mathlib
+
+* `CMonomial.toFinsupp : CMonomial σ → σ →₀ ℕ` lifts a monomial to a `Finsupp`.
+* `CMvPolynomial.toMvPolynomial : CMvPolynomial σ R → MvPolynomial σ R` is the
+  canonical ring map to Mathlib's `MvPolynomial`.
 -/
 
 -- ============================================================
@@ -29,7 +36,7 @@ making their `List`-based representation opaque to importing modules.
     The internal representation is a list of `(variable, exponent)` pairs
     sorted in **descending** order by `σ`'s `LinearOrder`, with all
     exponents strictly positive.  Use the API; do not pattern-match directly. -/
-@[reducible] def CMonomial (σ : Type*) := List (σ × ℕ)
+abbrev CMonomial (σ : Type*) := List (σ × ℕ)
 
 namespace CMonomial
 
@@ -172,17 +179,17 @@ end CMonomial_EqInstances
 -- CMvPolynomial
 -- ============================================================
 
-/-- A computable multivariate polynomial over a field `R` in variables `σ`.
+/-- A computable multivariate polynomial over a commutative semiring `R` in variables `σ`.
 
     Internally a list of `(CMonomial σ, R)` pairs with no duplicate monomials
     and no zero coefficients.  The terms are stored in unspecified order;
     use the order-dependent API in `CMonomialOrder` for leading-term operations. -/
-@[reducible] def CMvPolynomial (σ : Type*) (R : Type*) := List (CMonomial σ × R)
+abbrev CMvPolynomial (σ : Type*) (R : Type*) [CommSemiring R] := List (CMonomial σ × R)
 
 namespace CMvPolynomial
 
 variable {σ : Type*} [DecidableEq σ] [LinearOrder σ]
-variable {R : Type*} [Field R] [DecidableEq R]
+variable {R : Type*} [CommRing R] [DecidableEq R]
 
 -- ----------------------------------------
 -- Private normalisation helper
@@ -311,5 +318,134 @@ def fmtPoly [Repr R] (varName : σ → String) (p : CMvPolynomial σ R) : String
           |> String.intercalate " * "
         s!"{cs} * {mStr}")
     |> String.intercalate " + "
+
+end CMvPolynomial
+
+-- ============================================================
+-- Bridge: CMonomial.toFinsupp and CMvPolynomial.toMvPolynomial
+-- ============================================================
+
+/-!
+## Bridge to Mathlib's `MvPolynomial`
+
+### `CMonomial.toFinsupp`
+
+`toFinsupp` maps a `CMonomial σ` (a sorted list of `(variable, exponent)` pairs)
+to `σ →₀ ℕ` by summing `Finsupp.single x e` over the variable–exponent list.
+The canonical representation guarantees each variable appears at most once, so
+`(toFinsupp m) x = m.expOf x` for every `x`.
+
+### `CMvPolynomial.toMvPolynomial`
+
+`toMvPolynomial` maps each `(m, c)` term to `MvPolynomial.monomial (toFinsupp m) c`
+and sums over the term list.  This is a ring homomorphism (modulo the sorried lemmas).
+
+### Sorry inventory
+
+* `CMonomial.toFinsupp_expOf`          — sum-over-disjoint-singletons.
+* `CMonomial.toFinsupp_injective`       — follows from `toFinsupp_expOf`.
+* `CMonomial.toFinsupp_mul`             — exponent-addition after `mergeAdd`.
+* `CMvPolynomial.toMvPolynomial_add`    — normTerms transparency.
+* `CMvPolynomial.toMvPolynomial_neg`    — list-map over negation.
+* `CMvPolynomial.toMvPolynomial_smul`   — scalar multiplication linearity.
+* `CMvPolynomial.toMvPolynomial_monomialMul` — monomial-shift commutation.
+-/
+
+open MvPolynomial
+
+-- ----------------------------------------
+-- CMonomial.toFinsupp
+-- ----------------------------------------
+
+namespace CMonomial
+
+variable {σ : Type*} [DecidableEq σ] [LinearOrder σ]
+
+/-- Lift a `CMonomial` to a `Finsupp` by summing `Finsupp.single x e` over all
+`(x, e)` pairs.  The canonical representation guarantees each variable appears
+at most once, so `(toFinsupp m) x = m.expOf x`. -/
+noncomputable def toFinsupp (m : CMonomial σ) : σ →₀ ℕ :=
+  ((m.toExps : List (σ × ℕ)).map fun (x, e) => Finsupp.single x e).sum
+
+/-- `toFinsupp 1 = 0`. -/
+@[simp]
+lemma toFinsupp_one : toFinsupp (one (σ := σ)) = 0 := by
+  simp [toFinsupp, one, toExps]
+
+/-- `(toFinsupp m) x = m.expOf x`. -/
+lemma toFinsupp_expOf (m : CMonomial σ) (x : σ) :
+    toFinsupp m x = m.expOf x := by
+  sorry
+
+/-- `toFinsupp` is injective. -/
+lemma toFinsupp_injective : Function.Injective (toFinsupp (σ := σ)) := by
+  intro a b hab
+  sorry
+
+/-- `toFinsupp` respects multiplication: `toFinsupp (a * b) = toFinsupp a + toFinsupp b`. -/
+lemma toFinsupp_mul (a b : CMonomial σ) :
+    toFinsupp (a * b) = toFinsupp a + toFinsupp b := by
+  ext x
+  simp only [Finsupp.add_apply, toFinsupp_expOf]
+  sorry
+
+end CMonomial
+
+-- ----------------------------------------
+-- CMvPolynomial.toMvPolynomial
+-- ----------------------------------------
+
+namespace CMvPolynomial
+
+variable {σ : Type*} [DecidableEq σ] [LinearOrder σ]
+variable {R : Type*} [CommRing R] [DecidableEq R]
+
+/-- Lift a `CMvPolynomial` to `MvPolynomial σ R` by mapping each term `(m, c)` to
+`MvPolynomial.monomial (toFinsupp m) c` and summing. -/
+noncomputable def toMvPolynomial (p : CMvPolynomial σ R) : MvPolynomial σ R :=
+  ((p.toTerms : List (CMonomial σ × R)).map fun (m, c) =>
+    MvPolynomial.monomial (CMonomial.toFinsupp m) c).sum
+
+@[simp]
+lemma toMvPolynomial_zero : toMvPolynomial (0 : CMvPolynomial σ R) = 0 := rfl
+
+/-- `toMvPolynomial (ofMon m c) = monomial (toFinsupp m) c` when `c ≠ 0`. -/
+lemma toMvPolynomial_ofMon (m : CMonomial σ) (c : R) (hc : c ≠ 0) :
+    toMvPolynomial (ofMon m c) = MvPolynomial.monomial (CMonomial.toFinsupp m) c := by
+  simp [toMvPolynomial, ofMon, toTerms, hc]
+
+/-- `toMvPolynomial p = 0 ↔ p = 0`. -/
+lemma toMvPolynomial_eq_zero_iff (p : CMvPolynomial σ R) :
+    toMvPolynomial p = 0 ↔ p = 0 := by
+  sorry
+
+/-- `toMvPolynomial` is additive. -/
+lemma toMvPolynomial_add (p q : CMvPolynomial σ R) :
+    toMvPolynomial (p + q) = toMvPolynomial p + toMvPolynomial q := by
+  sorry
+
+/-- `toMvPolynomial` commutes with negation. -/
+lemma toMvPolynomial_neg (p : CMvPolynomial σ R) :
+    toMvPolynomial (-p) = -toMvPolynomial p := by
+  simp only [toMvPolynomial, neg, toTerms, List.map_map]
+  sorry
+
+/-- `toMvPolynomial` commutes with subtraction. -/
+@[simp]
+lemma toMvPolynomial_sub (p q : CMvPolynomial σ R) :
+    toMvPolynomial (p - q) = toMvPolynomial p - toMvPolynomial q := by
+  have : p - q = p + (-q) := rfl
+  rw [this, toMvPolynomial_add, toMvPolynomial_neg]; ring
+
+/-- `toMvPolynomial` commutes with scalar multiplication. -/
+lemma toMvPolynomial_smul (c : R) (p : CMvPolynomial σ R) :
+    toMvPolynomial (smul c p) = c • toMvPolynomial p := by
+  sorry
+
+/-- `toMvPolynomial` commutes with monomial-shift multiplication. -/
+lemma toMvPolynomial_monomialMul (shift : CMonomial σ) (p : CMvPolynomial σ R) :
+    toMvPolynomial (monomialMul shift p) =
+    MvPolynomial.monomial (CMonomial.toFinsupp shift) 1 * toMvPolynomial p := by
+  sorry
 
 end CMvPolynomial
