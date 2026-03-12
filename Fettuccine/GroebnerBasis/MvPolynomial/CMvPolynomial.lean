@@ -15,190 +15,69 @@ over commutative rings.
 -/
 
 /-- A monomial with variables `σ`. -/
-private structure CMonomial (σ : Type*) [LinearOrder σ] where
-  /-- The underlying list of variable-exponent pairs. -/
-  lst : List (σ × ℕ)
-  /-- The statement that this representation is sorted, meaning that the terms
-  are arranged in **decreasing** order. -/
-  is_sorted : lst.Pairwise (·.1 > ·.1)
-  /-- The statement that the representation is reduced, meaning that there are
-  no trivial terms. -/
-  is_reduced : ∀ xn ∈ lst, xn.2 ≠ 0
+-- For the time being, we will store monomials with the variables arranged in
+-- **strictly decreasing** order and without redundancy, and will carefully
+-- maintain these invariants.
+abbrev CMonomial (σ : Type*) [LinearOrder σ] := List (σ × ℕ)
 
 namespace CMonomial
 
 variable {σ : Type*} [LinearOrder σ]
 
-/-- The unit monomial. -/
-def one : CMonomial σ := ⟨[], by simp, by simp⟩
-
-/-- Create a monomial from a variable and an exponent. -/
-def ofVarExp (x : σ) (n : ℕ) (hn : n ≠ 0) : CMonomial σ := ⟨[(x, n)], by simp, by aesop⟩
-
-/-- Create a linear monomial from a variable. -/
-def ofVar (x : σ) : CMonomial σ := ofVarExp x 1 (by simp)
-
-/-- We can prepend a variable to a monomial, so long as it is greater than all
-existing variables. -/
-def cons_gt (x : σ) (n : ℕ) (m : CMonomial σ) (hx : ∀ p ∈ m.lst, x > p.1) (hn : n ≠ 0) :
-    CMonomial σ where
-  lst         := (x, n) :: m.lst
-  is_sorted   := List.pairwise_cons.mpr ⟨hx, m.is_sorted⟩
-  is_reduced  := List.forall_mem_cons.mpr ⟨hn, m.is_reduced⟩
-
-/-- The tail of a monomial is a monomial. -/
-def tail (m : CMonomial σ) : CMonomial σ where
-  lst         := m.lst.tail
-  is_sorted   := m.is_sorted.tail
-  is_reduced  := by
-    intro xn h
-    exact m.is_reduced xn (List.mem_of_mem_tail h)
-
-@[ext]
-lemma ext {m₁ m₂ : CMonomial σ} (h : m₁.lst = m₂.lst) : m₁ = m₂ := by
-  cases m₁; cases m₂; simp_all
-
--- Computation of the product of monomials.
-section Mul
-
-private structure CMonomialMul (a b : CMonomial σ) where
-  /-- The product monomial. -/
-  ab : CMonomial σ
-  /-- A proof of an invariant property of multiplication, needed in the proof
-  that `ab` is a monomial. -/
-  is_mul (x : σ) (ha : ∀ p ∈ a.lst, x > p.1) (hb : ∀ p ∈ b.lst, x > p.1) :
-    ∀ p ∈ ab.lst, x > p.1
-
-def mul' (a b : CMonomial σ) : CMonomialMul a b :=
-  match ha : a.lst, hb : b.lst with
-  | _, [] => ⟨a, fun _ h _ => ha ▸ h⟩
-  | [], _ => ⟨b, fun _ _ h => hb ▸ h⟩
-  | (x, m) :: a', (y, n) :: b' =>
-    if hxy : x > y then
-      -- Prepend (x, m) to the product of a.tail and b.
-      let ih := mul' a.tail b
-      have hm : m ≠ 0 := a.is_reduced (x, m) (ha ▸ List.mem_cons.mpr (Or.inl rfl))
-      have h_sorted_a : ∀ p ∈ a', x > p.1 :=
-        (List.pairwise_cons.mp (ha ▸ a.is_sorted)).1
-      have ha' : a.tail.lst = a' := by simp [tail, ha]
-      have h_x_gt_b : ∀ p ∈ b.lst, x > p.1 := by
-        rw [hb]; intro p hmem
-        rcases List.mem_cons.mp hmem with rfl | hmem'
-        · exact hxy
-        · exact lt_trans ((List.pairwise_cons.mp (hb ▸ b.is_sorted)).1 p hmem' : y > p.1) hxy
-      have h_x_gt_ih : ∀ p ∈ ih.ab.lst, x > p.1 :=
-        ih.is_mul x (ha' ▸ h_sorted_a) h_x_gt_b
-      { ab := ih.ab.cons_gt x m h_x_gt_ih hm
-        is_mul := fun w hw_a hw_b => by
-          intro p hp
-          rcases List.mem_cons.mp hp with rfl | hp'
-          · exact hw_a (x, m) (ha ▸ List.mem_cons.mpr (Or.inl rfl))
-          · apply ih.is_mul w _ hw_b p hp'
-            intro q hq
-            exact hw_a q (ha ▸ List.mem_cons_of_mem _ (ha' ▸ hq)) }
-    else if hyx : y > x then
-      -- Prepend (y, n) to the product of a and b.tail.
-      let ih := mul' a b.tail
-      have hn : n ≠ 0 := b.is_reduced (y, n) (hb ▸ List.mem_cons.mpr (Or.inl rfl))
-      have h_sorted_b : ∀ p ∈ b', y > p.1 :=
-        (List.pairwise_cons.mp (hb ▸ b.is_sorted)).1
-      have hb' : b.tail.lst = b' := by simp [tail, hb]
-      have h_y_gt_a : ∀ p ∈ a.lst, y > p.1 := by
-        rw [ha]; intro p hmem
-        rcases List.mem_cons.mp hmem with rfl | hmem'
-        · exact hyx
-        · exact lt_trans ((List.pairwise_cons.mp (ha ▸ a.is_sorted)).1 p hmem' : x > p.1) hyx
-      have h_y_gt_ih : ∀ p ∈ ih.ab.lst, y > p.1 :=
-        ih.is_mul y h_y_gt_a (hb' ▸ h_sorted_b)
-      { ab := ih.ab.cons_gt y n h_y_gt_ih hn
-        is_mul := fun w hw_a hw_b => by
-          intro p hp
-          rcases List.mem_cons.mp hp with rfl | hp'
-          · exact hw_b (y, n) (hb ▸ List.mem_cons.mpr (Or.inl rfl))
-          · apply ih.is_mul w hw_a _ p hp'
-            intro q hq
-            exact hw_b q (hb ▸ List.mem_cons_of_mem _ (hb' ▸ hq)) }
-    else
-      -- x = y: the same variable, so add exponents.
-      have hxy_eq : x = y := le_antisymm (not_lt.mp hxy) (not_lt.mp hyx)
-      let ih := mul' a.tail b.tail
-      have hm : m ≠ 0 := a.is_reduced (x, m) (ha ▸ List.mem_cons.mpr (Or.inl rfl))
-      have hmn : m + n ≠ 0 := by omega
-      have ha' : a.tail.lst = a' := by simp [tail, ha]
-      have hb' : b.tail.lst = b' := by simp [tail, hb]
-      have h_sorted_a : ∀ p ∈ a', x > p.1 :=
-        (List.pairwise_cons.mp (ha ▸ a.is_sorted)).1
-      have h_sorted_b : ∀ p ∈ b', y > p.1 :=
-        (List.pairwise_cons.mp (hb ▸ b.is_sorted)).1
-      have h_x_gt_ih : ∀ p ∈ ih.ab.lst, x > p.1 :=
-        ih.is_mul x (ha' ▸ h_sorted_a) (hb' ▸ hxy_eq ▸ h_sorted_b)
-      { ab := ih.ab.cons_gt x (m + n) h_x_gt_ih hmn
-        is_mul := fun w hw_a hw_b => by
-          intro p hp
-          rcases List.mem_cons.mp hp with rfl | hp'
-          · exact hw_a (x, m) (ha ▸ List.mem_cons.mpr (Or.inl rfl))
-          · apply ih.is_mul w _ _ p hp'
-            · intro q hq; exact hw_a q (ha ▸ List.mem_cons_of_mem _ (ha' ▸ hq))
-            · intro q hq; exact hw_b q (hb ▸ List.mem_cons_of_mem _ (hb' ▸ hq)) }
-termination_by a.lst.length + b.lst.length
-decreasing_by all_goals simp_all only [tail, List.tail_cons, List.length_cons]; omega
+/-- The one monomial. -/
+def one : CMonomial σ := []
 
 /-- Compute the product of two monomials. -/
 def mul (a b : CMonomial σ) : CMonomial σ :=
-  (mul' a b).ab
+  match a, b with
+  | _, [] => a
+  | [], _ => b
+  | (x₁, n₁) :: as, (x₂, n₂) :: bs =>
+    match compare x₁ x₂ with
+    | -- Since n₁ and n₂ are both positive, it follows that n₁ + n₂ ≥ 2, and so
+      -- this does not introduce redundancy.
+      Ordering.eq => (x₁, n₁ + n₂) :: mul as bs
+    | Ordering.gt => (x₁, n₁) :: mul as ((x₂, n₂) :: bs)
+    | Ordering.lt => (x₂, n₂) :: mul ((x₁, n₁) :: as) bs
 
-end Mul
-
-def x1 : CMonomial ℕ := ofVar 0
-def x2 : CMonomial ℕ := ofVarExp 0 2 (by simp)
-def y1 : CMonomial ℕ := ofVar 1
-def g : CMonomial ℕ := mul x1 y1
-#print g
-#eval g
-
--- Computation of the lowest common multiple of monomials.
-section LCM
-
--- WIP
-
-end LCM
-
--- Computation of the quotient of monomials.
-section Div
-
--- WIP
-
-end Div
-
--- The equivalence of `CMonomial σ` and `σ →₀ ℕ`.
-section Equiv
-
-/-- Lift a `CMonomial σ` to a `σ →₀ ℕ` -/
-noncomputable def toFinsupp (m : CMonomial σ) : σ →₀ ℕ :=
-  m.lst.toFinset.sum (fun (x, n) => Finsupp.single x n)
-
-/-- Reduce a `σ →₀ ℕ` to a `CMonomial σ`. -/
-noncomputable def ofFinsupp (m : σ →₀ ℕ) : CMonomial σ where
-  lst         := m.support.val.toList.map (fun x => (x, m x))
-  is_sorted   := by
-    sorry
-  is_reduced  := by aesop
-
-/-- A monomial function can be recovered from its finite support. -/
-lemma ofFinsupp_toFinsupp (m : σ →₀ ℕ) : (ofFinsupp m).toFinsupp = m := by
-  sorry
-
-/-- A monomial can be recovered from its monomial function. -/
-lemma toFinsupp_ofFinsupp (m : CMonomial σ) : ofFinsupp (toFinsupp m) = m := by
-  sorry
-
-/-- The equivalence between monomials and finitely-supported monomial functions. -/
-noncomputable def equivFinsupp : CMonomial σ ≃ (σ →₀ ℕ) where
-  toFun     := toFinsupp
-  invFun    := ofFinsupp
-  left_inv  := toFinsupp_ofFinsupp
-  right_inv := ofFinsupp_toFinsupp
-
-end Equiv
+/-- Compute the lowest common multiple of two monomials. -/
+def lcm (a b : CMonomial σ) : CMonomial σ :=
+  match a, b with
+  | _, [] => a
+  | [], _ => b
+  | (x₁, n₁) :: as, (x₂, n₂) :: bs =>
+    match compare x₁ x₂ with
+    | Ordering.eq => (x₁, max n₁ n₂) :: lcm as bs
+    | Ordering.gt => (x₁, n₁) :: lcm as ((x₂, n₂) :: bs)
+    | Ordering.lt => (x₂, n₂) :: lcm ((x₁, n₁) :: as) bs
 
 end CMonomial
+
+/-- A multivariate polynomial with variables `σ` and coefficients in `R`. -/
+abbrev CMvPolynomial (σ : Type*) (R : Type*) [LinearOrder σ] [CommSemiring R] :=
+  List ((CMonomial σ) × R)
+
+namespace CMvPolynomial
+
+variable {σ : Type*} [LinearOrder σ]
+variable {R : Type*} [CommSemiring R]
+
+/-- The zero polynomial. -/
+def zero : CMvPolynomial σ R := []
+
+/-- The one polynomial. -/
+def one : CMvPolynomial σ R := [(CMonomial.one, 1)]
+
+/-- Compute the sum of two polynomials. -/
+def add (f g : CMvPolynomial σ R) : CMvPolynomial σ R :=
+  sorry
+
+/-- Negate a polynomial. -/
+def neg (f : CMvPolynomial σ R) : CMvPolynomial σ R :=
+  sorry
+
+/-- Compute the product of two polynomials. -/
+def mul (f g : CMvPolynomial σ R) : CMvPolynomial σ R :=
+  sorry
+
+end CMvPolynomial
