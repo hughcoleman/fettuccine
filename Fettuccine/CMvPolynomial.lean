@@ -1,7 +1,6 @@
 import Mathlib.Algebra.DirectSum.Ring
-import Mathlib.Algebra.Group.TransferInstance
+import Mathlib.Algebra.Ring.TransferInstance
 import Mathlib.Data.DFinsupp.Lex
-import Mathlib.Data.DFinsupp.Multiset
 import Mathlib.Data.Finset.Sort
 
 /-!
@@ -12,11 +11,10 @@ computable analogues of `σ →₀ ℕ` and `MvPolynomial σ R` respectively.
 
 ## Definitions
 
-* `CMonomial σ` : the type of monomials with variables in `σ`, i.e. finitely
-  supported functions `σ → ℕ` recording the exponent of each variable.
+* `CMonomial σ` : the type of monomials with variables `σ`.
 * `CMonomial.X i` : the monomial `xᵢ` (variable `i` with exponent 1).
-* `CMvPolynomial σ R` : the type of multivariate polynomials with variables in
-  `σ` and coefficients in `R`.
+* `CMvPolynomial σ R` : the type of multivariate polynomials with variables `σ`
+  and coefficients `R`.
 * `CMvPolynomial.X i` : the polynomial `xᵢ`.
 * `CMvPolynomial.C a` : the constant polynomial with value `a`.
 -/
@@ -73,31 +71,10 @@ def equiv : CMonomial σ ≃ (Π₀ _ : σ, ℕ) where
 lemma ext {m₁ m₂ : CMonomial σ} (h : ∀ i, m₁ i = m₂ i) : m₁ = m₂ :=
   DFunLike.ext _ _ h
 
--- `CMonomial σ` can be endowed with the structure of a commutative monoid
--- under multiplication of monomials (which corresponds to **addition** of the
--- underlying exponent functions).
-
-instance : One (CMonomial σ) := ⟨⟨0⟩⟩
-instance : Mul (CMonomial σ) := ⟨fun m₁ m₂ => ⟨m₁.toFun + m₂.toFun⟩⟩
-
-@[simp] lemma toFun_one : (1 : CMonomial σ).toFun = 0 := rfl
-
-instance : CommMonoid (CMonomial σ) where
-  mul_assoc m₁ m₂ m₃  := by simp [HMul.hMul, Mul.mul, add_assoc]
-  one_mul m           := by simp [HMul.hMul, Mul.mul]
-  mul_one m           := by simp [HMul.hMul, Mul.mul]
-  mul_comm m₁ m₂      := by simp [HMul.hMul, Mul.mul, add_comm]
-
--- We also have that this structure is cancellative.
-instance : LeftCancelMonoid (CMonomial σ) where
-  mul_left_cancel m₁ m₂ m₃ h := by
-    simp only [HMul.hMul, Mul.mul] at h
-    ext i; exact Nat.add_left_cancel (DFunLike.congr_fun h i)
-
-instance : RightCancelMonoid (CMonomial σ) where
-  mul_right_cancel m₁ m₂ m₃ h := by
-    simp only [HMul.hMul, Mul.mul] at h
-    ext i; exact Nat.add_right_cancel (DFunLike.congr_fun h i)
+-- `CMonomial σ` can be endowed with the structure of an additive commutative
+-- monoid, lifted from the corresponding structure on `Π₀ _ : σ, ℕ`.
+instance : AddCommMonoid (CMonomial σ) :=
+  equiv.addCommMonoid
 
 /-- The monomial `xᵢ` (variable `i` with exponent 1). -/
 def X (i : σ) : CMonomial σ := ⟨DFinsupp.single i 1⟩
@@ -167,30 +144,9 @@ def equiv : CMvPolynomial σ R ≃ (⨁ _ : CMonomial σ, R) where
   right_inv := toFun_ofFun
 
 -- `CMvPolynomial σ` can be endowed with the structure of a commutative
--- semiring.
-
--- These instances are required by `DirectSum.GSemiring` to define multiplication.
-private instance : AddCommMonoid (CMonomial σ) :=
-  CMonomial.equiv.addCommMonoid
-
--- Delegate to `DirectSum` for the operations.
-instance : Zero (CMvPolynomial σ R)     := ⟨⟨0⟩⟩
-instance : One (CMvPolynomial σ R)      := ⟨⟨1⟩⟩
-instance : NatCast (CMvPolynomial σ R)  := ⟨fun n => ⟨n⟩⟩
-instance : Add (CMvPolynomial σ R)      := ⟨fun p q => ⟨p.toFun + q.toFun⟩⟩
-instance : Mul (CMvPolynomial σ R)      := ⟨fun p q => ⟨p.toFun * q.toFun⟩⟩
-instance : SMul ℕ (CMvPolynomial σ R)   := ⟨fun n p => ⟨n • p.toFun⟩⟩
-instance : Pow (CMvPolynomial σ R) ℕ    := ⟨fun p n => ⟨p.toFun ^ n⟩⟩
-
+-- semiring, lifted from the corresponding structure on `⨁ _ : CMonomial σ, R`.
 instance : CommSemiring (CMvPolynomial σ R) :=
-  Function.Injective.commSemiring toFun
-    (fun p q h => by cases p; cases q; simp_all)
-    rfl rfl
-    (fun a b => rfl)
-    (fun a b => rfl)
-    (fun a b => rfl)
-    (fun a n => rfl)
-    (fun n => rfl)
+  equiv.commSemiring
 
 /-- The support of a monomial are its terms with non-zero coefficient. -/
 def support [DecidableEq R] (p : CMvPolynomial σ R) : Finset (CMonomial σ) :=
@@ -206,13 +162,10 @@ def X (i : σ) : CMvPolynomial σ R :=
 
 /-- The constant polynomial with value `a`. -/
 def C (a : R) : CMvPolynomial σ R :=
-  ⟨DirectSum.of (fun _ => R) 1 a⟩
-
-/-- The polynomial of a monomial. -/
-def ofMonomial (a : R) (m : CMonomial σ) : CMvPolynomial σ R :=
-  ⟨DirectSum.of (fun _ => R) m a⟩
+  ⟨DirectSum.of (fun _ => R) 0 a⟩
 
 /-- Display a polynomial as a sum of terms. -/
+-- THIS IS UGLY. We should implement this in terms of a CMonomialOrder.
 instance [DecidableEq R] [LinearOrder σ] [Repr σ] [Repr R] :
     Repr (CMvPolynomial σ R) where
   reprPrec f _ :=
@@ -231,3 +184,5 @@ instance [DecidableEq R] [LinearOrder σ] [Repr σ] [Repr R] :
       Std.Format.joinSep terms " + "
 
 end CMvPolynomial
+
+#min_imports
