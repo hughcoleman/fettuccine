@@ -57,15 +57,10 @@ instance : FunLike (CMonomial σ) σ ℕ where
 /-- Construct a `CMonomial` from a `DFinsupp`. -/
 def ofFun (f : Π₀ _ : σ, ℕ) : CMonomial σ := ⟨f⟩
 
-@[simp] lemma toFun_ofFun (f : Π₀ _ : σ, ℕ) : (ofFun f).toFun = f := rfl
-@[simp] lemma ofFun_toFun (m : CMonomial σ) : ofFun m.toFun = m := by cases m; rfl
-
 /-- `CMonomial σ` is equivalent to `Π₀ _ : σ, ℕ`. -/
 def equiv : CMonomial σ ≃ (Π₀ _ : σ, ℕ) where
-  toFun     := toFun
-  invFun    := ofFun
-  left_inv  := ofFun_toFun
-  right_inv := toFun_ofFun
+  toFun  := toFun
+  invFun := ofFun
 
 @[ext]
 lemma ext {m₁ m₂ : CMonomial σ} (h : ∀ i, m₁ i = m₂ i) : m₁ = m₂ :=
@@ -76,17 +71,37 @@ lemma ext {m₁ m₂ : CMonomial σ} (h : ∀ i, m₁ i = m₂ i) : m₁ = m₂ 
 instance : AddCommMonoid (CMonomial σ) :=
   equiv.addCommMonoid
 
+-- The equivalnce is, by construction, additive.
+@[simp] lemma toFun_add (m₁ m₂ : CMonomial σ) : (m₁ + m₂).toFun = m₁.toFun + m₂.toFun :=
+  rfl
+
+@[simp] lemma coe_add (m₁ m₂ : CMonomial σ) (x : σ) : (m₁ + m₂) x = m₁ x + m₂ x :=
+  rfl
+
 /-- The monomial `xᵢ` (variable `i` with exponent 1). -/
 def X (i : σ) : CMonomial σ := ⟨DFinsupp.single i 1⟩
 
 /-- The support of a monomial are its variables with non-zero exponent. -/
 def support (m : CMonomial σ) : Finset σ := m.toFun.support
 
-@[simp] lemma mem_support_iff (m : CMonomial σ) (i : σ) : i ∈ m.support ↔ m i ≠ 0 :=
+@[simp] lemma mem_support_iff (m : CMonomial σ) (x : σ) : x ∈ m.support ↔ m x ≠ 0 :=
   DFinsupp.mem_support_iff
+
+@[simp] lemma support_add_eq (m₁ m₂ : CMonomial σ) :
+    (m₁ + m₂).support = m₁.support ∪ m₂.support := by
+  ext i; simp; omega
 
 /-- The degree of a monomial is the sum of its exponents. -/
 def degree (m : CMonomial σ) : ℕ := m.support.sum (m ·)
+
+/-- The degree of a monomial is additive. -/
+lemma degree_add (m₁ m₂ : CMonomial σ) : degree (m₁ + m₂) = degree m₁ + degree m₂ := by
+  simp only [degree, support_add_eq, coe_add]
+  rw [Finset.sum_add_distrib]; congr 1
+  · refine Finset.sum_union_eq_left ?_
+    intro a _ ha; simp_all
+  · refine Finset.sum_union_eq_right ?_
+    intro a _ ha; simp_all
 
 /-- Display a monomial as a product of variables with exponents. -/
 instance [LinearOrder σ] [Repr σ] : Repr (CMonomial σ) where
@@ -133,15 +148,10 @@ instance : FunLike (CMvPolynomial σ R) (CMonomial σ) R where
 /-- Construct a `CMvPolynomial` from a `DirectSum`. -/
 def ofFun (f : ⨁ _ : CMonomial σ, R) : CMvPolynomial σ R := ⟨f⟩
 
-@[simp] lemma toFun_ofFun (f : ⨁ _ : CMonomial σ, R) : (ofFun f).toFun = f := rfl
-@[simp] lemma ofFun_toFun (p : CMvPolynomial σ R) : ofFun p.toFun = p := by cases p; rfl
-
 /-- `CMvPolynomial σ R` is equivalent to `⨁ _ : CMonomial σ, R`. -/
 def equiv : CMvPolynomial σ R ≃ (⨁ _ : CMonomial σ, R) where
-  toFun     := toFun
-  invFun    := ofFun
-  left_inv  := ofFun_toFun
-  right_inv := toFun_ofFun
+  toFun  := toFun
+  invFun := ofFun
 
 -- `CMvPolynomial σ` can be endowed with the structure of a commutative
 -- semiring, lifted from the corresponding structure on `⨁ _ : CMonomial σ, R`.
