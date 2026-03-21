@@ -22,9 +22,10 @@ This file defines `CMonomialOrder`, a typeclass for monomial orders on
 /-- A **monomial order** on `σ` is a well-founded, translation-invariant total
     order on `CMonomial σ`. -/
 class CMonomialOrder (σ : Type*) [DecidableEq σ] extends
-  LinearOrder (CMonomial σ),
-  IsOrderedCancelAddMonoid (CMonomial σ),
-  WellFoundedLT (CMonomial σ)
+    LinearOrder (CMonomial σ),
+    IsOrderedCancelAddMonoid (CMonomial σ),
+    WellFoundedLT (CMonomial σ) where
+  decidableLE : DecidableRel (· ≤ · : CMonomial σ → CMonomial σ → Prop)
 
 namespace CMonomialOrder
 
@@ -73,11 +74,72 @@ lemma eq_of_add_eq_of_le {m₁ m₂ m₁' m₂' : CMonomial σ}
   have heq₂ : m₁  + m₂' = m₁ + m₂  := le_antisymm hle₂ (h ▸ hle₁)
   exact ⟨add_right_cancel heq₁, add_left_cancel heq₂⟩
 
+/-! ## Monomial Orders -/
+
+/-! ### Lex -/
+
+namespace Lex
+
+open CMonomialOrder
+
+variable {σ : Type*} [DecidableEq σ] [LinearOrder σ]
+
+/-- Lift the lexicographic order to a linear order on `CMonomial σ`. -/
+instance : LinearOrder (CMonomial σ) :=
+  LinearOrder.lift' (fun m => toLex m.toFun)
+    (fun m₁ m₂ h => by cases m₁; cases m₂; simp_all)
+
+/-- Lift the well-foundedness of the lexicographic order. -/
+instance [WellFoundedGT σ] : WellFoundedLT (CMonomial σ) :=
+  ⟨InvImage.wf (fun (m : CMonomial σ) => toLex m.toFun) DFinsupp.Lex.wellFoundedLT.wf⟩
+
+/-- The lexicographic order on `CMonomial σ`. -/
+instance lex [WellFoundedGT σ] : CMonomialOrder σ where
+  add_le_add_left m₁ m₂ h m := by
+    have h' : toLex m₁.toFun ≤ toLex m₂.toFun := by
+      exact h
+    change toLex (m₁.toFun + m.toFun) ≤ toLex (m₂ + m).toFun
+    exact add_le_add_left h' _
+  le_of_add_le_add_left m m₁ m₂ h := by
+    change toLex m₁.toFun ≤ toLex m₂.toFun
+    exact le_of_add_le_add_left h
+  decidableLE m₁ m₂ :=
+    decidable_of_iff
+      (toLex m₁.toFun ≤ toLex m₂.toFun)
+      (by rfl)
+
+end Lex
+
+/-! ### Grlex -/
+
+namespace Grlex
+
+-- /-- The graded lexicographic order on `CMonomial σ`. -/
+
+end Grlex
+
+/-! ### Grevlex -/
+
+namespace Grevlex
+
+open CMonomialOrder
+
+variable {σ : Type*} [DecidableEq σ] [LinearOrder σ]
+
+def key (m : CMonomial σ) : ℕ ×ₗ Lex (Π₀ _ : σ, ℕ) :=
+  (m.degree, toLex m.toFun)
+
+-- /-- The graded reverse lexicographic order on `CMonomial σ`. -/
+
+end Grevlex
+
 end CMonomialOrder
 
-namespace CMvPolynomial
+/-! ## Leading Monomials -/
 
 section LeadingMonomial
+
+namespace CMvPolynomial
 
 variable {σ : Type*} [DecidableEq σ] (ord : CMonomialOrder σ)
 variable {R : Type*} [DecidableEq R] [CommSemiring R]
@@ -134,61 +196,6 @@ lemma le_leadingMonomial (f : CMvPolynomial σ R) {m : CMonomial σ} (hm : m ∈
 --     (f + g).support.max' h ≤ max (f.support.max' hf) (g.support.max' hg) :=
 --   sorry
 
-end LeadingMonomial
-
-/-! ## Monomial Orders -/
-
-/-! ### Lex -/
-
-namespace Lex
-
-open CMonomialOrder
-
-variable {σ : Type*} [DecidableEq σ] [LinearOrder σ]
-
-/-- Lift the lexicographic order to a linear order on `CMonomial σ`. -/
-instance : LinearOrder (CMonomial σ) :=
-  LinearOrder.lift' (fun m => toLex m.toFun)
-    (fun m₁ m₂ h => by cases m₁; cases m₂; simp_all)
-
-/-- Lift the well-foundedness of the lexicographic order. -/
-instance [WellFoundedGT σ] : WellFoundedLT (CMonomial σ) :=
-  ⟨InvImage.wf (fun (m : CMonomial σ) => toLex m.toFun) DFinsupp.Lex.wellFoundedLT.wf⟩
-
-/-- The lexicographic order on `CMonomial σ`. -/
-instance lex [WellFoundedGT σ] : CMonomialOrder σ where
-  add_le_add_left m₁ m₂ h m := by
-    have h' : toLex m₁.toFun ≤ toLex m₂.toFun := by
-      exact h
-    change toLex (m₁.toFun + m.toFun) ≤ toLex (m₂ + m).toFun
-    exact add_le_add_left h' _
-  le_of_add_le_add_left m m₁ m₂ h := by
-    change toLex m₁.toFun ≤ toLex m₂.toFun
-    exact le_of_add_le_add_left h
-
-end Lex
-
-/-! ### Grlex -/
-
-namespace Grlex
-
--- /-- The graded lexicographic order on `CMonomial σ`. -/
-
-end Grlex
-
-/-! ### Grevlex -/
-
-namespace Grevlex
-
-open CMonomialOrder
-
-variable {σ : Type*} [DecidableEq σ] [LinearOrder σ]
-
-def key (m : CMonomial σ) : ℕ ×ₗ Lex (Π₀ _ : σ, ℕ) :=
-  (m.degree, toLex m.toFun)
-
--- /-- The graded reverse lexicographic order on `CMonomial σ`. -/
-
-end Grevlex
-
 end CMvPolynomial
+
+end LeadingMonomial
