@@ -140,7 +140,7 @@ end LeadingMonomial
 
 /-! ### Lex -/
 
-section Lex
+namespace Lex
 
 open CMonomialOrder
 
@@ -155,18 +155,13 @@ instance : LinearOrder (CMonomial σ) :=
 instance [WellFoundedGT σ] : WellFoundedLT (CMonomial σ) :=
   ⟨InvImage.wf (fun (m : CMonomial σ) => toLex m.toFun) DFinsupp.Lex.wellFoundedLT.wf⟩
 
-@[simp] lemma lex_le_iff (m₁ m₂ : CMonomial σ) :
-    m₁ ≤ m₂ ↔ toLex m₁.toFun ≤ toLex m₂.toFun := Iff.rfl
-
-@[simp] lemma toFun_add (m₁ m₂ : CMonomial σ) :
-    (m₁ + m₂).toFun = m₁.toFun + m₂.toFun := by
-  rfl
-
 /-- The lexicographic order on `CMonomial σ`. -/
 instance lex [WellFoundedGT σ] : CMonomialOrder σ where
   add_le_add_left m₁ m₂ h m := by
-    rw [lex_le_iff, toFun_add] at *
-    exact add_le_add_left h _
+    have h' : toLex m₁.toFun ≤ toLex m₂.toFun := by
+      exact h
+    change toLex (m₁.toFun + m.toFun) ≤ toLex (m₂ + m).toFun
+    exact add_le_add_left h' _
   le_of_add_le_add_left m m₁ m₂ h := by
     change toLex m₁.toFun ≤ toLex m₂.toFun
     exact le_of_add_le_add_left h
@@ -175,7 +170,7 @@ end Lex
 
 /-! ### Grlex -/
 
-section Grlex
+namespace Grlex
 
 -- /-- The graded lexicographic order on `CMonomial σ`. -/
 
@@ -183,7 +178,14 @@ end Grlex
 
 /-! ### Grevlex -/
 
-section Grevlex
+namespace Grevlex
+
+open CMonomialOrder
+
+variable {σ : Type*} [DecidableEq σ] [LinearOrder σ]
+
+def key (m : CMonomial σ) : ℕ ×ₗ Lex (Π₀ _ : σ, ℕ) :=
+  (m.degree, toLex m.toFun)
 
 -- /-- The graded reverse lexicographic order on `CMonomial σ`. -/
 
