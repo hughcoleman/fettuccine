@@ -80,8 +80,6 @@ section Instances
 
 namespace Lex
 
-open CMonomialOrder
-
 variable {σ : Type*} [DecidableEq σ] [LinearOrder σ]
 
 /-- Lift the lexicographic order to a linear order on `CMonomial σ`. -/
@@ -112,18 +110,16 @@ end Lex
 
 namespace Grlex
 
+variable {σ : Type*} [DecidableEq σ] [LinearOrder σ]
+
+def key (m : CMonomial σ) : ℕ ×ₗ Lex (Π₀ _ : σ, ℕ) :=
+  (m.degree, toLex m.toFun)
+
 -- /-- The graded lexicographic order on `CMonomial σ`. -/
 
 end Grlex
 
 namespace Grevlex
-
-open CMonomialOrder
-
-variable {σ : Type*} [DecidableEq σ] [LinearOrder σ]
-
-def key (m : CMonomial σ) : ℕ ×ₗ Lex (Π₀ _ : σ, ℕ) :=
-  (m.degree, toLex m.toFun)
 
 -- /-- The graded reverse lexicographic order on `CMonomial σ`. -/
 
