@@ -4,7 +4,7 @@ import Mathlib.Data.DFinsupp.Lex
 import Mathlib.Data.Finset.Sort
 
 /-!
-# Computable multivariate polynomials
+# Computable Multivariate Polynomials
 
 This file defines the types `CMonomial σ` and `CMvPolynomial σ R`, which are
 computable analogues of `σ →₀ ℕ` and `MvPolynomial σ R` respectively.

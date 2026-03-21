@@ -2,7 +2,7 @@ import Fettuccine.CMvPolynomial
 import Mathlib.Data.DFinsupp.WellFounded
 
 /-!
-# Computable monomial orders
+# Computable Monomial Orders
 
 This file defines `CMonomialOrder`, a typeclass for monomial orders on
 `CMonomial σ`, and provides an instance for the lexicographic order.
@@ -12,6 +12,8 @@ This file defines `CMonomialOrder`, a typeclass for monomial orders on
 * `CMonomialOrder σ` : a well-founded, translation-invariant total order on
   `CMonomial σ`.
 * `CMonomialOrder.lex` : the lexicographic order on monomials.
+* `CMvPolynomial.leadingMonomial` : the leading monomial of a multivariate
+  polynomial with respect to a monomial order.
 
 ## Notation
 
@@ -74,9 +76,7 @@ lemma eq_of_add_eq_of_le {m₁ m₂ m₁' m₂' : CMonomial σ}
   have heq₂ : m₁  + m₂' = m₁ + m₂  := le_antisymm hle₂ (h ▸ hle₁)
   exact ⟨add_right_cancel heq₁, add_left_cancel heq₂⟩
 
-/-! ## Monomial Orders -/
-
-/-! ### Lex -/
+section Instances
 
 namespace Lex
 
@@ -110,15 +110,11 @@ instance lex [WellFoundedGT σ] : CMonomialOrder σ where
 
 end Lex
 
-/-! ### Grlex -/
-
 namespace Grlex
 
 -- /-- The graded lexicographic order on `CMonomial σ`. -/
 
 end Grlex
-
-/-! ### Grevlex -/
 
 namespace Grevlex
 
@@ -133,9 +129,9 @@ def key (m : CMonomial σ) : ℕ ×ₗ Lex (Π₀ _ : σ, ℕ) :=
 
 end Grevlex
 
-end CMonomialOrder
+end Instances
 
-/-! ## Leading Monomials -/
+end CMonomialOrder
 
 section LeadingMonomial
 
