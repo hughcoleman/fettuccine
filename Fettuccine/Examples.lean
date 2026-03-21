@@ -27,8 +27,8 @@ def f₃ := x^2*y^3 + 2*x*y^2 + 3*z^2 + 1
 example : 3*x^2 ≠ 0 ∧ 2*y^3 ≠ 0 ∧ 3*z + 1 ≠ 0 ∧ 1 ≠ 0 := by
   decide
 
-example : 3*x^2 ≠ 0 ∧ 2*y^3 ≠ 0 ∧ 3*z + 1 ≠ 0 ∧ 1 ≠ 0 := by
-  native_decide
+-- example : 3*x^2 ≠ 0 ∧ 2*y^3 ≠ 0 ∧ 3*z + 1 ≠ 0 ∧ 1 ≠ 0 := by
+--   native_decide
 
 end Examples_MvPolynomial
 
