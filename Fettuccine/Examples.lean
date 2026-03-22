@@ -1,5 +1,6 @@
 import Fettuccine.CMonomialOrder
 import Fettuccine.CMvPolynomial
+import Fettuccine.Repr
 
 abbrev σ := Fin 3
 
@@ -21,8 +22,21 @@ def f₁ := 3*x^2 + 2*y^3 + 3*z + 1
 def f₂ := 2*x^2 + 1*y^3 + 4*z
 def f₃ := x^2*y^3 + 2*x*y^2 + 3*z^2 + 1
 
+section
+instance : CMonomialOrder σ := CMonomialOrder.lex
 #eval f₁ + f₂
 #eval f₁ * f₂ * f₃
+#eval (f₁ + f₂).leadingMonomial
+#eval (f₁ * f₂ * f₃).leadingMonomial
+end
+
+section
+instance : CMonomialOrder σ := CMonomialOrder.grlex
+#eval f₁ + f₂
+#eval f₁ * f₂ * f₃
+#eval (f₁ + f₂).leadingMonomial
+#eval (f₁ * f₂ * f₃).leadingMonomial
+end
 
 example : 3*x^2 ≠ 0 ∧ 2*y^3 ≠ 0 ∧ 3*z + 1 ≠ 0 ∧ 1 ≠ 0 := by
   decide
@@ -41,6 +55,7 @@ def y : CMonomial σ := X 1
 def z : CMonomial σ := X 2
 
 def x2 := 2 • x
+def y3 := 3 • y
 def xy := x + y -- xy
 def yz := y + z -- yz
 def xy2z := x + 2 • y + z -- xy²z
@@ -53,14 +68,15 @@ def xy2z := x + 2 • y + z -- xy²z
 example : xy + x = y + x2 := by
   decide
 
-example : (x ≺[Lex.lex] x2) ∧ (xy ≺[Lex.lex] x2) ∧ (yz ≺[Lex.lex] xy)
-    ∧ (xy ≺[Lex.lex] x2) ∧ (xy ≺[Lex.lex] x2 + y) := by
-  split_ands
-  all_goals rw [CMonomialOrder.lt']; decide
+example : (x ≺[lex] x2) ∧ (xy ≺[lex] x2) ∧ (yz ≺[lex] xy)
+    ∧ (xy ≺[lex] x2) ∧ (xy ≺[lex] x2 + y) := by
+  decide
 
-example : (x2 ≼[Lex.lex] x2) ∧ (yz ≼[Lex.lex] x2) := by
-  split_ands
-  all_goals rw [CMonomialOrder.le']
+example : (x2 ≼[lex] x2) ∧ (yz ≼[lex] x2) := by
+  decide
+
+example : ((x2 : CMonomial σ) ≺[grlex] y3) := by
+  apply grlex_isGraded -- not technically necessary
   decide
 
 end Examples_MonomialOrder
@@ -76,7 +92,16 @@ def z : CMvPolynomial σ Int := X 2
 def f₁ := 3*x^2 + 2*y^3 + 3*z + 1
 def f₂ : CMvPolynomial σ Int := 0
 
-#eval f₁.leadingMonomial Lex.lex
-#eval f₂.leadingMonomial Lex.lex
+section
+instance : CMonomialOrder σ := lex
+#eval f₁.leadingMonomial
+#eval f₂.leadingMonomial
+end
+
+section
+instance : CMonomialOrder σ := grlex
+#eval f₁.leadingMonomial
+#eval f₂.leadingMonomial
+end
 
 end Examples_LeadingMonomial
