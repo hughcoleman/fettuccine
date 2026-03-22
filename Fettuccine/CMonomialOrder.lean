@@ -40,8 +40,10 @@ structure CMonomialOrder (σ : Type*) [DecidableEq σ] where
   wf : WellFoundedLT syn
   /-- The order on `syn` is decidable. -/
   dec : DecidableRel (α := syn) (· ≤ ·)
-  /-- The additive equivalence of `CMonomial σ` to `syn`. -/
-  toSyn : (CMonomial σ) ≃+ syn
+  /-- The embedding of `CMonomial σ` in `syn`. -/
+  toSyn : (CMonomial σ) →+ syn
+  /-- The embedding is injective. -/
+  toSyn_injective : Function.Injective toSyn.toFun
 
 attribute [instance]
   CMonomialOrder.acm CMonomialOrder.lo CMonomialOrder.iocam CMonomialOrder.wf CMonomialOrder.dec
@@ -49,12 +51,6 @@ attribute [instance]
 namespace CMonomialOrder
 
 variable {σ : Type*} [DecidableEq σ] (ord : CMonomialOrder σ)
-
-instance : LinearOrder (CMonomial σ) :=
-  sorry
-
--- FIXME: State a lemma here that says that the order on `CMonomial σ` is the pullback of the order
--- on `syn` via `toSyn`...?
 
 -- Zero is a minimal element of any monomial order.
 private lemma zero_le' (m : ord.syn) : 0 ≤ m := by
@@ -104,21 +100,13 @@ lemma le_add_right (m₁ m₂ : CMonomial σ) : m₁ ≼[ord] m₁ + m₂ := by
   rw [ord.toSyn.map_add]
   exact ord.le_add_right' (ord.toSyn m₁) (ord.toSyn m₂)
 
-/-- If a sum of monomials attains a sum of upper bounds, then the summands each attain their upper
-    bound. -/
-lemma eq_of_add_eq_of_le {m₁ m₂ m₁' m₂' : CMonomial σ}
-    (h₁ : m₁' ≼[ord] m₁) (h₂ : m₂' ≼[ord] m₂) (h : m₁' + m₂' = m₁ + m₂) :
-    m₁' = m₁ ∧ m₂' = m₂ := by
-  sorry
-
 variable [LinearOrder σ]
 
 section Lex
 
 /-- The lexicographic order on monomials. -/
 def lex [WellFoundedGT σ] : (CMonomialOrder σ) where
-  -- We will lift the lexicographic order on `Π₀ _ : σ, ℕ` to a monomial order on `CMonomial σ` via
-  -- the equivalence `toLex`.
+  -- We use the lexicographic order on `Π₀ _ : σ, ℕ`.
   syn := Lex (Π₀ _ : σ, ℕ)
   -- Most instances can be synthesized by inference.
   acm   := instAddCommMonoidLex
@@ -126,57 +114,115 @@ def lex [WellFoundedGT σ] : (CMonomialOrder σ) where
   iocam := DFinsupp.Lex.isOrderedCancelAddMonoid
   wf    := DFinsupp.Lex.wellFoundedLT
   dec   := DFinsupp.Lex.decidableLE
-  -- The additive equivalence is given by `toLex`.
+  -- The equivalence is given by `toLex`.
   toSyn := {
-    toFun m         := toLex m.toFun,
-    invFun m        := CMonomial.ofFun m
+    toFun m         := toLex m.toFun
+    map_zero'       := toLex_eq_zero.mpr rfl
     map_add' m₁ m₂  := (Equiv.apply_eq_iff_eq_symm_apply toLex).mpr rfl
   }
+  toSyn_injective   := by
+    intros m₁ m₂ h; cases m₁; cases m₂; simp_all
 
 end Lex
 
+def IsGraded (ord : CMonomialOrder σ) : Prop :=
+  ∀ m₁ m₂ : CMonomial σ, m₁.degree < m₂.degree → m₁ ≺[ord] m₂
+
 section Grlex
 
--- /-- The graded lexicographic order on monomials. -/
--- def grlex [WellFoundedGT σ] : (CMonomialOrder σ) where
---   -- We will lift the graded lexicographic order on `ℕ ×ₗ Lex (Π₀ _ : σ, ℕ)` to a monomial order on
---   -- `CMonomial σ`.
---   syn := ℕ ×ₗ Lex (Π₀ _ : σ, ℕ)
---   -- Most instances can be synthesized by inference.
---   acm   := instAddCommMonoidLex
---   lo    := Prod.Lex.instLinearOrder _ _
---   iocam := sorry
---   wf    := sorry
---   dec   := Prod.Lex.instDecidableRelOfDecidableEq
---   -- The additive equivalence given by `toLex`, augmented with the degree.
---   toSyn := {
---     toFun m         := (m.degree, toLex m.toFun),
---     invFun m        := CMonomial.ofFun m.2,
---     map_add' m₁ m₂  := by
---       sorry
---   }
+instance instGrlexIsOrderedCancelAddMonoid :
+    IsOrderedCancelAddMonoid (Lex (ℕ × Lex (Π₀ _ : σ, ℕ))) where
+  add_le_add_left := fun a b h c => by
+    simp only [Prod.Lex.le_iff] at *
+    rcases h with h | ⟨h, h'⟩
+    · left; exact add_lt_add_left h _
+    · right; exact ⟨by simp; omega, add_le_add_left h' _⟩
+  le_of_add_le_add_left := fun a b c h => by
+    simp only [Prod.Lex.le_iff] at *
+    rcases h with h | ⟨h, h'⟩
+    · left; exact lt_of_add_lt_add_left h
+    · right; exact ⟨add_left_cancel h, le_of_add_le_add_left h'⟩
+
+instance instGrlexWellFoundedLT [WellFoundedGT σ] : WellFoundedLT (Lex (ℕ × Lex (Π₀ _ : σ, ℕ))) :=
+  ⟨InvImage.wf (fun (p : Lex (ℕ × Lex (Π₀ _ : σ, ℕ))) => (p.1, p.2))
+    (WellFounded.prod_lex Nat.lt_wfRel.wf DFinsupp.Lex.wellFoundedLT.wf)⟩
+
+/-- The graded lexicographic order on monomials. -/
+def grlex [WellFoundedGT σ] : (CMonomialOrder σ) where
+  -- We use the graded lexicographic order on `ℕ × Lex (Π₀ _ : σ, ℕ)`.
+  syn := Lex (ℕ × Lex (Π₀ _ : σ, ℕ))
+  -- Most instances can be synthesized by inference.
+  acm   := instAddCommMonoidLex
+  lo    := Prod.Lex.instLinearOrder _ _
+  iocam := instGrlexIsOrderedCancelAddMonoid
+  wf    := instGrlexWellFoundedLT
+  dec   := Prod.Lex.instDecidableRelOfDecidableEq
+  -- The additive equivalence given by `toLex`, augmented with the degree.
+  toSyn := {
+    toFun m         := (m.degree, toLex m.toFun),
+    map_zero'       := ofLex_eq_zero.mp rfl,
+    map_add' m₁ m₂  := by
+      simp [CMonomial.degree_add, CMonomial.toFun_add]
+      rfl
+  }
+  toSyn_injective := by
+    intros m₁ m₂ h
+    have h' : toLex m₁.toFun = toLex m₂.toFun :=
+      congr_arg Prod.snd h
+    cases m₁; cases m₂; simp_all
+
+/-- The graded lexicographic order on monomials is graded. -/
+lemma grlex.IsGraded [wf : WellFoundedGT σ] : IsGraded (@grlex _ _ _ wf) := by
+  intros m₁ m₂ h
+  change
+    toLex (m₁.degree, toLex m₁.toFun) < toLex (m₂.degree, toLex m₂.toFun)
+  rw [Prod.Lex.toLex_lt_toLex]
+  exact Or.inl h
 
 end Grlex
 
 section Grevlex
 
--- /-- The graded reverse lexicographic order on monomials. -/
--- def grevlex [WellFoundedGT σ] : (CMonomialOrder σ) where
---   -- We will lift the graded reverse lexicographic order on `ℕ ×ₗ OrderDual (Lex (Π₀ _ : σ, ℕ))` to
---   -- a monomial order on `CMonomial σ`.
---   syn := ℕ ×ₗ OrderDual (Lex (Π₀ _ : σ, ℕ))
---   -- Most instances can be synthesized by inference.
---   acm   := instAddCommMonoidLex
---   lo    := Prod.Lex.instLinearOrder _ _
---   iocam := sorry
---   wf    := sorry
---   dec   := Prod.Lex.instDecidableRelOfDecidableEq
---   -- The additive equivalence given by `toLex`, augmented with the degree.
---   toSyn := {
---     toFun m         := (m.degree, m.toFun),
---     invFun m        := CMonomial.ofFun m.2,
---     map_add' m₁ m₂  := sorry
---   }
+instance instGrevlexIsOrderedCancelAddMonoid :
+    IsOrderedCancelAddMonoid (Lex (ℕ × OrderDual (Lex (Π₀ _ : OrderDual σ, ℕ)))) where
+  add_le_add_left := fun a b h c => by
+    simp only [Prod.Lex.le_iff] at *
+    rcases h with h | ⟨h, h'⟩
+    · left; exact add_lt_add_left h _
+    · right; exact ⟨by simp; omega, add_le_add_left h' _⟩
+  le_of_add_le_add_left := fun a b c h => by
+    simp only [Prod.Lex.le_iff] at *
+    rcases h with h | ⟨h, h'⟩
+    · left; exact lt_of_add_lt_add_left h
+    · right; exact ⟨add_left_cancel h, le_of_add_le_add_left h'⟩
+
+/-- The graded reverse lexicographic order on monomials. -/
+def grevlex [WellFoundedGT σ] : (CMonomialOrder σ) where
+  -- We use the graded reverse lexicographic order on `ℕ × OrderDual (Lex (Π₀ _ : OrderDual σ, ℕ))`.
+  syn := Lex (ℕ × OrderDual (Lex (Π₀ _ : OrderDual σ, ℕ)))
+  -- Most instances can be synthesized by inference.
+  acm   := instAddCommMonoidLex
+  lo    := Prod.Lex.instLinearOrder _ _
+  iocam := instGrevlexIsOrderedCancelAddMonoid
+  wf    := sorry
+  dec   := Prod.Lex.instDecidableRelOfDecidableEq
+  -- The additive equivalence given by `toLex`, augmented with the degree.
+  toSyn := {
+    toFun m         := (m.degree, toLex m.toFun),
+    map_zero'       := ofLex_eq_zero.mp rfl,
+    map_add' m₁ m₂  := by
+      simp [CMonomial.degree_add, CMonomial.toFun_add]
+      rfl
+  }
+  toSyn_injective := by
+    intros m₁ m₂ h
+    have h' : toLex m₁.toFun = toLex m₂.toFun :=
+      congr_arg Prod.snd h
+    cases m₁; cases m₂; simp_all
+
+/-- The graded reverse lexicographic order on monomials is graded. -/
+lemma grevlex.IsGraded [wf : WellFoundedGT σ] : IsGraded (@grevlex _ _ _ wf) := by
+  sorry
 
 end Grevlex
 
@@ -195,7 +241,7 @@ variable {R : Type*} [DecidableEq R] [CommSemiring R]
 def leadingMonomial (f : CMvPolynomial σ R) : Option (CMonomial σ) :=
   let supp := f.support
   if h : supp.Nonempty then
-    some (supp.max' h)
+    some sorry -- some (supp.max' h)
   else
     none
 
