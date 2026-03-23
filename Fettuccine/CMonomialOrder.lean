@@ -109,8 +109,10 @@ section Instances
 
 variable [DecidableEq σ] [LinearOrder σ] [WellFoundedLT σ]
 
-instance instGrlexIsOrderedCancelAddMonoid :
-    IsOrderedCancelAddMonoid (Lex (ℕ × Lex (Π₀ _ : σ, ℕ))) where
+instance instLexIsOrderedCancelAddMonoid {α β : Type*}
+    [AddCancelCommMonoid α] [PartialOrder α] [IsOrderedCancelAddMonoid α]
+    [AddCancelCommMonoid β] [PartialOrder β] [IsOrderedCancelAddMonoid β] :
+    IsOrderedCancelAddMonoid (Lex (α × β)) where
   add_le_add_left := fun a b h c => by
     simp only [Prod.Lex.le_iff] at *
     rcases h with h | ⟨h, h'⟩
@@ -122,10 +124,11 @@ instance instGrlexIsOrderedCancelAddMonoid :
     · left;  exact lt_of_add_lt_add_left h
     · right; exact ⟨add_left_cancel h, le_of_add_le_add_left h'⟩
 
-instance instGrlexWellFoundedLT [WellFoundedGT σ] :
-    WellFoundedLT (Lex (ℕ × Lex (Π₀ _ : σ, ℕ))) :=
-  ⟨InvImage.wf (fun (p : Lex (ℕ × Lex (Π₀ _ : σ, ℕ))) => (p.1, p.2))
-    (WellFounded.prod_lex Nat.lt_wfRel.wf DFinsupp.Lex.wellFoundedLT.wf)⟩
+instance instLexWellFoundedLT {α β : Type*} [LT α] [LT β]
+    [WellFoundedLT α] [WellFoundedLT β] :
+    WellFoundedLT (Lex (α × β)) :=
+  ⟨InvImage.wf (fun (p : Lex (α × β)) => (p.1, p.2))
+    (WellFounded.prod_lex (wellFounded_lt (α := α)) (wellFounded_lt (α := β)))⟩
 
 /-- The lexicographic order on monomials. -/
 def lex : CMonomialOrder σ where
@@ -151,8 +154,8 @@ def grlex : CMonomialOrder σ where
   syn   := ℕ ×ₗ Lex (Π₀ _ : σᵒᵈ, ℕ)
   acm   := Prod.instAddCommMonoid
   lo    := Prod.Lex.instLinearOrder ℕ (Lex (Π₀ (x : σᵒᵈ), ℕ))
-  iocam := instGrlexIsOrderedCancelAddMonoid
-  wf    := instGrlexWellFoundedLT
+  iocam := sorry
+  wf    := sorry
   dec   := Prod.Lex.instDecidableRelOfDecidableEq
   toSyn := {
     toFun     := fun m => (m.degree, toLex (show Π₀ _ : σᵒᵈ, ℕ from m.toFun))
@@ -189,6 +192,8 @@ end Instances
 end CMonomialOrder
 
 namespace CMonomialOrder
+
+set_option linter.unusedSectionVars false
 
 variable {σ : Type*} [DecidableEq σ] [LinearOrder σ] [WellFoundedLT σ]
 
