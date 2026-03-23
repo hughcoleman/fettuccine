@@ -19,6 +19,8 @@ lexicographic (grevlex) orders.
 
 ## Notation
 
+* `m₁ ≺ m₂` : strict inequality under the (inferred) monomial order.
+* `m₁ ≼ m₂` : inequality under the (inferred) monomial order.
 * `m₁ ≺[ord] m₂` : strict inequality under the monomial order `ord`.
 * `m₁ ≼[ord] m₂` : inequality under the monomial order `ord`.
 -/
@@ -26,7 +28,7 @@ lexicographic (grevlex) orders.
 /-- A **monomial order** on `σ` is a well-founded, translation-invariant, decidable total order on
     `CMonomial σ`. -/
 -- This pretty blatantly copies the structure of Mathlib/Data/Finsupp/MonomialOrder.lean, but
--- perhaps this will turn out to be a desirable property.
+-- perhaps this will turn out to be a desirable property of our definition.
 class CMonomialOrder (σ : Type*) [DecidableEq σ] where
   /-- The synonym type from which the order is lifted. -/
   syn : Type*
