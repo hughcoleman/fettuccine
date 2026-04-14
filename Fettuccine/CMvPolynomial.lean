@@ -1,11 +1,12 @@
 import Mathlib.Algebra.DirectSum.Ring
 import Mathlib.Algebra.Ring.TransferInstance
+import Mathlib.Data.DFinsupp.Order
 
 /-!
 # Computable Multivariate Polynomials
 
 This file defines the types `CMonomial σ` and `CMvPolynomial σ R`, which are
-computable analogues of `σ →₀ ℕ` and `MvPolynomial σ R` respectively.
+computable realizations of `σ →₀ ℕ` and `MvPolynomial σ R` respectively.
 
 ## Definitions
 
@@ -21,57 +22,24 @@ computable analogues of `σ →₀ ℕ` and `MvPolynomial σ R` respectively.
 
 /-- A computable monomial in variables `σ` is a finitely-supported function
     `σ → ℕ` recording the exponent of each variable. -/
--- This is defined as an opaque structure to avoid conflicts with instances
--- provided by `DFinsupp` instances.
-structure CMonomial (σ : Type*) [DecidableEq σ] where
-  /-- The underlying finitely-supported exponent function. -/
-  toFun : Π₀ _ : σ, ℕ
-
-attribute [coe] CMonomial.toFun
+abbrev CMonomial (σ : Type*) [DecidableEq σ] :=
+  Π₀ _ : σ, ℕ
 
 namespace CMonomial
 
 variable {σ : Type*} [DecidableEq σ]
 
-/-- Equality of monomials is decidable. -/
-instance : DecidableEq (CMonomial σ) :=
-  fun m₁ m₂ => decidable_of_iff (m₁.toFun = m₂.toFun)
-    ⟨fun h => by cases m₁; cases m₂; exact congrArg _ h, fun h => by cases h; rfl⟩
-
-/-- Since the underlying representation is a function, a monomial is `FunLike`. -/
-instance : FunLike (CMonomial σ) σ ℕ where
-  coe p := p.toFun
-  coe_injective' p₁ p₂ h := by cases p₁; cases p₂; simp_all
-
-/-- Construct a `CMonomial` from a `DFinsupp`. -/
-def ofFun (f : Π₀ _ : σ, ℕ) : CMonomial σ := ⟨f⟩
-
-/-- `CMonomial σ` is equivalent to `Π₀ _ : σ, ℕ`. -/
-def equiv : CMonomial σ ≃ (Π₀ _ : σ, ℕ) where
-  toFun  := toFun
-  invFun := ofFun
-
-@[ext]
-lemma ext {m₁ m₂ : CMonomial σ} (h : ∀ i, m₁ i = m₂ i) : m₁ = m₂ :=
-  DFunLike.ext _ _ h
-
--- `CMonomial σ` can be endowed with the structure of an additive commutative
--- monoid, lifted from the corresponding structure on `Π₀ _ : σ, ℕ`.
-instance : AddCommMonoid (CMonomial σ) :=
-  equiv.addCommMonoid
-
--- The equivalnce is, by construction, additive.
-@[simp] lemma toFun_add (m₁ m₂ : CMonomial σ) : (m₁ + m₂).toFun = m₁.toFun + m₂.toFun :=
-  rfl
-
-@[simp] lemma coe_add (m₁ m₂ : CMonomial σ) (x : σ) : (m₁ + m₂) x = m₁ x + m₂ x :=
-  rfl
+-- There is a natural preorder on `CMonomial σ` given by the pointwise order on
+-- the underlying functions. Every monomial order must inherit this order.
+instance [DecidableEq σ] : Preorder (CMonomial σ) where
+  le a b := a.toFun ≤ b.toFun
+  le_refl _ := by
+    simp_all only [le_refl]
+  le_trans _ _ _ hab hbc :=
+    le_trans hab hbc
 
 /-- The monomial `xᵢ` (variable `i` with exponent 1). -/
-def X (i : σ) : CMonomial σ := ⟨DFinsupp.single i 1⟩
-
-/-- The support of a monomial are its variables with non-zero exponent. -/
-def support (m : CMonomial σ) : Finset σ := m.toFun.support
+def X (i : σ) : CMonomial σ := DFinsupp.single i 1
 
 @[simp] lemma mem_support_iff (m : CMonomial σ) (x : σ) : x ∈ m.support ↔ m x ≠ 0 :=
   DFinsupp.mem_support_iff
@@ -85,12 +53,7 @@ def degree (m : CMonomial σ) : ℕ := m.support.sum (m ·)
 
 /-- The degree of a monomial is additive. -/
 lemma degree_add (m₁ m₂ : CMonomial σ) : degree (m₁ + m₂) = degree m₁ + degree m₂ := by
-  simp only [degree, support_add_eq, coe_add]
-  rw [Finset.sum_add_distrib]; congr 1
-  · refine Finset.sum_union_eq_left ?_
-    intro a _ ha; simp_all
-  · refine Finset.sum_union_eq_right ?_
-    intro a _ ha; simp_all
+  sorry
 
 /-- A monomial is squarefree if no variables appear with exponent greater than 1. -/
 def isSquarefree (m : CMonomial σ) : Prop :=
@@ -102,64 +65,32 @@ end CMonomial
 
 open DirectSum
 
-/-- A computable multivariate polynomial over the coefficient ring `R` in
-    variables `σ` is a finitely-supported function from `CMonomial σ` to `R`. -/
-structure CMvPolynomial (σ : Type*) [DecidableEq σ] (R : Type*) [CommSemiring R] where
-  toFun : ⨁ _ : CMonomial σ, R
-
-attribute [coe] CMvPolynomial.toFun
+abbrev CMvPolynomial (σ : Type*) [DecidableEq σ] (R : Type*) [CommSemiring R] :=
+  ⨁ _ : CMonomial σ, R
 
 namespace CMvPolynomial
 
 variable {σ : Type*} [DecidableEq σ]
 variable {R : Type*} [CommSemiring R]
 
-/-- Equality of multivariate polynomials is decidable. -/
-instance [DecidableEq R] : DecidableEq (CMvPolynomial σ R) :=
-  fun p q => decidable_of_iff (p.toFun = q.toFun)
-    ⟨fun h => by cases p; cases q; simp_all, fun h => by cases h; rfl⟩
-
-/-- Since the underlying representation is a function, a multivariate
-    polynomial is `FunLike`. -/
-instance : FunLike (CMvPolynomial σ R) (CMonomial σ) R where
-  coe p := p.toFun
-  coe_injective' p₁ p₂ h := by cases p₁; cases p₂; simp_all
-
-/-- Construct a `CMvPolynomial` from a `DirectSum`. -/
-def ofFun (f : ⨁ _ : CMonomial σ, R) : CMvPolynomial σ R := ⟨f⟩
-
-/-- `CMvPolynomial σ R` is equivalent to `⨁ _ : CMonomial σ, R`. -/
-def equiv : CMvPolynomial σ R ≃ (⨁ _ : CMonomial σ, R) where
-  toFun  := toFun
-  invFun := ofFun
-
--- `CMvPolynomial σ` can be endowed with the structure of a commutative
--- semiring, lifted from the corresponding structure on `⨁ _ : CMonomial σ, R`.
-instance : CommSemiring (CMvPolynomial σ R) :=
-  equiv.commSemiring
-
-/-- The support of a monomial are its terms with non-zero coefficient. -/
-def support [DecidableEq R] (p : CMvPolynomial σ R) : Finset (CMonomial σ) :=
-  p.toFun.support
-
 @[simp] lemma mem_support_iff [DecidableEq R] (p : CMvPolynomial σ R) (m : CMonomial σ) :
     m ∈ p.support ↔ p m ≠ 0 :=
-  DFinsupp.mem_support_iff
+  sorry
 
 /-- The variable `xᵢ` as a polynomial. -/
 def X (i : σ) : CMvPolynomial σ R :=
-  ⟨DirectSum.of (fun _ => R) (CMonomial.X i) 1⟩
+  DirectSum.of (fun _ => R) (CMonomial.X i) 1
 
 /-- The constant polynomial with value `a`. -/
 def C (a : R) : CMvPolynomial σ R :=
-  ⟨DirectSum.of (fun _ => R) 0 a⟩
+  DirectSum.of (fun _ => R) 0 a
 
 /-- The polynomial with a single term `a m`. -/
 def ofMonomial (m : CMonomial σ) (a : R) : CMvPolynomial σ R :=
-  ⟨DirectSum.of (fun _ => R) m a⟩
+  DirectSum.of (fun _ => R) m a
 
 lemma support_ofMonomial [DecidableEq R] (m : CMonomial σ) (c : R) (hc : c ≠ 0) :
     (ofMonomial m c).support = {m} := by
-  simp [support, ofMonomial, hc]
+  sorry
 
 end CMvPolynomial

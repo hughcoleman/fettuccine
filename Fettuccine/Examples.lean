@@ -8,9 +8,9 @@ abbrev σ := Fin 3
 
 instance : Repr σ where
   reprPrec i _ := match i with
-    | 2 => "x"
+    | 0 => "x"
     | 1 => "y"
-    | 0 => "z"
+    | 2 => "z"
 
 namespace MvPolynomial
 
@@ -18,16 +18,16 @@ open CMvPolynomial
 
 instance : CMonomialOrder σ := CMonomialOrder.lex
 
-def x : CMvPolynomial σ Int := X 2
+def x : CMvPolynomial σ Int := X 0
 def y : CMvPolynomial σ Int := X 1
-def z : CMvPolynomial σ Int := X 0
+def z : CMvPolynomial σ Int := X 2
 def f₁ := 3*x^2 + 2*y^3 + 3*z + 1
 def f₂ := 2*x^2 + 1*y^3 + 4*z
 def f₃ := x^2*y^3 + 2*x*y^2 + 3*z^2 + 1
 
-#eval f₁
-#eval f₁ + f₂
-#eval f₁ * f₂ * f₃
+#eval f₁.support
+#eval (f₁ + f₂).support
+#eval (f₁ * f₂ * f₃).support
 
 -- We can also compute with polynomials.
 example : 3*x^2 ≠ 0 ∧ 2*y^3 ≠ 0 ∧ 3*z + 1 ≠ 0 ∧ 1 ≠ 0 := by
@@ -39,9 +39,9 @@ namespace MonomialOrder
 
 open CMonomial
 
-def x : CMonomial σ := X 2
+def x : CMonomial σ := X 0
 def y : CMonomial σ := X 1
-def z : CMonomial σ := X 0
+def z : CMonomial σ := X 2
 
 -- To be compatible with the underlying implementation, monomials are written
 -- additively despite convention.
@@ -68,20 +68,12 @@ example : (x2 ≼[lex] x2) ∧ (yz ≼[lex] x2) := by
 example : ¬(x2 ≺[lex] y3) := by
   decide
 
-example : (x2 ≺[grlex] y3) := by
-  apply grlex_isGraded -- not technically necessary... `decide` can do it too.
-  decide
+-- example : (x2 ≺[grlex] y3) := by
+--   apply grlex_isGraded -- not technically necessary... `decide` can do it too.
+--   decide
 
--- You can can also specifically name an instance in order to use it implicitly.
-section
-instance : CMonomialOrder σ := CMonomialOrder.grlex
-
-example : (x2 ≺ y3) := by
-  decide
-end
-
--- Can also obtain lex on `CMonomial ℕ`, if you need infinite variables.
-example : CMonomialOrder ℕ := lex
+-- Can also obtain lex on `ℕ` with the dual order.
+example : CMonomialOrder ℕᵒᵈ := lex
 
 end MonomialOrder
 
@@ -89,23 +81,21 @@ namespace LeadingMonomial
 
 open CMonomialOrder CMvPolynomial
 
-def x : CMvPolynomial σ Int := X 2
+def x : CMvPolynomial σ Int := X 0
 def y : CMvPolynomial σ Int := X 1
-def z : CMvPolynomial σ Int := X 0
+def z : CMvPolynomial σ Int := X 2
 
 def f₁ := 3*x^2 + 2*y^3 + 3*z + 1
 def f₂ : CMvPolynomial σ Int := 0
 
 section
-instance : CMonomialOrder σ := lex
-#eval f₁.leadingMonomial
-#eval f₂.leadingMonomial
+#eval f₁.leadingMonomial lex
+#eval f₂.leadingMonomial lex
 end
 
 section
-instance : CMonomialOrder σ := grlex
-#eval f₁.leadingMonomial
-#eval f₂.leadingMonomial
+-- #eval f₁.leadingMonomial grlex
+-- #eval f₂.leadingMonomial grlex
 end
 
 end LeadingMonomial

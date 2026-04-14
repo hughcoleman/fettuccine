@@ -1,5 +1,8 @@
 import Fettuccine.CMvPolynomial
 import Fettuccine.CMonomialOrder
+import Mathlib.Algebra.DirectSum.Ring
+import Mathlib.Algebra.Ring.TransferInstance
+import Mathlib.Data.DFinsupp.Lex
 import Mathlib.Data.Finset.Sort
 
 /-- An instance of `Repr` for `Fin n`, displaying as x₀, x₁, etc. -/
@@ -27,19 +30,28 @@ instance : Repr (CMonomial σ) where
       Std.Format.joinSep terms ""
 
 variable {R : Type*} [DecidableEq R] [CommSemiring R] [Repr R]
-variable [CMonomialOrder σ]
 
-/-- Display a multivariate polynomial. -/
-instance : Repr (CMvPolynomial σ R) where
-  reprPrec f _ :=
-    let terms := f.toFun.support.sort (· ≥ ·)
-      |>.filterMap fun m =>
-        let coeff := f m
-        if      coeff == 0 then none
-        else if coeff == 1 then
-          some f!"{reprPrec m 0}"
-        else
-          some f!"{reprPrec coeff 0}{reprPrec m 0}"
-    if terms.isEmpty then "0"
-    else
-      Std.Format.joinSep terms " + "
+open CMonomialOrder
+open scoped CMonomialOrder
+
+-- /-- Display a multivariate polynomial. -/
+-- instance [WellFoundedGT σ] : Repr (CMvPolynomial σ R) where
+--   reprPrec f _ :=
+--     haveI : LinearOrder (CMonomial σ) := LinearOrder.lift'
+--       (fun m => toLex m.toFun)
+--       (fun m₁ m₂ h => by cases m₁; cases m₂; simp_all)
+--     haveI : DecidableRel fun x1 x2 ↦ x1 ≤ x2 := by
+--       sorry
+--     haveI : Std.Antisymm fun x1 x2 ↦ x1 < x2 := by
+--       sorry
+--     haveI : Std.Total fun x1 x2 ↦ x1 < x2 := by
+--       sorry
+--     let terms := f.toFun.support.sort (· ≤ ·)
+--       |>.filterMap fun m =>
+--         let coeff := f m
+--         if      coeff == 0 then none
+--         else if coeff == 1 then some (reprPrec m 0)
+--         else                    some f!"{reprPrec coeff 0}{reprPrec m 0}"
+--     if terms.isEmpty then "0"
+--     else
+--       Std.Format.joinSep terms " + "
