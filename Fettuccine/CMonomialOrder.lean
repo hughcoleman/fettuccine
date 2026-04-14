@@ -149,10 +149,8 @@ def leadingMonomial (f : CMvPolynomial σ R) : CMonomial σ :=
   ord.toSyn.symm (f.support.sup ord.toSyn)
 
 -- Notation for leading monomials with an explicit order.
-scoped[CMvPolynomial] notation:50 "lm[" ord:25 "](" f:50 ")" =>
+scoped notation:50 "lm[" ord:25 "](" f:50 ")" =>
   CMvPolynomial.leadingMonomial (ord := ord) f
-
-open scoped CMvPolynomial
 
 /-- The leading monomial of the zero polynomial is zero. -/
 @[simp] lemma leadingMonomial_zero : (0 : CMvPolynomial σ R).leadingMonomial ord = 0 := by
@@ -161,13 +159,13 @@ open scoped CMvPolynomial
 
 /-- The monomials of a polynomial are bounded by the leading monomial. -/
 @[simp] lemma le_leadingMonomial (f : CMvPolynomial σ R) (m : CMonomial σ) (hm : m ∈ f.support) :
-  ord.toSyn m ≤ ord.toSyn (lm[ord](f)) := by
+    ord.toSyn m ≤ ord.toSyn (lm[ord](f)) := by
   simp only [leadingMonomial, AddEquiv.apply_symm_apply]
   exact Finset.le_sup hm
 
 /-- The leading monomial of a non-zero polynomial is an element of its support. -/
 @[simp] lemma leadingMonomial_mem_support (f : CMvPolynomial σ R) (hf : f ≠ 0) :
-  (lm[ord](f)) ∈ f.support := by
+    (lm[ord](f)) ∈ f.support := by
   simp only [leadingMonomial]
   have hne : f.support.Nonempty := by
     exact (support_nonempty_iff f).mpr hf
@@ -193,7 +191,7 @@ lemma leadingMonomial_sum_le {ι : Type*} (s : Finset ι) (f : ι → CMvPolynom
   -- A monomial in the sum's support appears in some summand's support.
   rcases (Finset.mem_biUnion.mp ((CMvPolynomial.support_sum_subset s f) hm)) with ⟨i, hi, hmi⟩
   calc
-    ord.toSyn m ≤ ord.toSyn (lm[ord](f i)) := le_leadingMonomial (ord := ord) (f i) m hmi
+    ord.toSyn m ≤ ord.toSyn (lm[ord](f i)) := le_leadingMonomial ord (f i) m hmi
     _           ≤ s.sup (fun i => ord.toSyn (lm[ord](f i))) :=
                     (Finset.le_sup (s := s) (f := fun i => ord.toSyn (lm[ord](f i))) hi)
 
