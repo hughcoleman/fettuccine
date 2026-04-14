@@ -1,6 +1,7 @@
 import Mathlib.Algebra.DirectSum.Ring
 import Mathlib.Algebra.Ring.TransferInstance
 import Mathlib.Data.DFinsupp.Order
+import Mathlib.Data.Finset.NAry
 
 /-!
 # Computable Multivariate Polynomials
@@ -29,8 +30,8 @@ namespace CMonomial
 
 variable {σ : Type*} [DecidableEq σ]
 
--- There is a natural preorder on `CMonomial σ` given by the pointwise order on
--- the underlying functions. Every monomial order must inherit this order.
+-- There is a natural preorder on `CMonomial σ` given by the pointwise order on the underlying
+-- functions. Every monomial order must inherit this order, so we define it here.
 instance [DecidableEq σ] : Preorder (CMonomial σ) where
   le a b := a.toFun ≤ b.toFun
   le_refl _ := by
@@ -51,9 +52,32 @@ def X (i : σ) : CMonomial σ := DFinsupp.single i 1
 /-- The degree of a monomial is the sum of its exponents. -/
 def degree (m : CMonomial σ) : ℕ := m.support.sum (m ·)
 
+lemma sum_union_support_eq (m : CMonomial σ) (t : Finset σ) :
+    (m.support ∪ t).sum (fun i => m i) = m.support.sum (fun i => m i) := by
+  classical
+    refine (Finset.sum_subset (Finset.subset_union_left (s₁ := m.support) (s₂ := t)) ?_).symm
+    intro i _ hi; simpa using (DFinsupp.notMem_support_iff).mp hi
+
 /-- The degree of a monomial is additive. -/
 lemma degree_add (m₁ m₂ : CMonomial σ) : degree (m₁ + m₂) = degree m₁ + degree m₂ := by
-  sorry
+  classical
+  -- Expand the degree as a sum over the union of supports.
+  unfold degree
+  have hsum₁ :
+      (m₁.support ∪ m₂.support).sum (fun i => m₁ i) = m₁.support.sum (fun i => m₁ i) := by
+    exact sum_union_support_eq (m := m₁) (t := m₂.support)
+  have hsum₂ :
+      (m₁.support ∪ m₂.support).sum (fun i => m₂ i) = m₂.support.sum (fun i => m₂ i) := by
+    simpa [Finset.union_comm] using sum_union_support_eq (m := m₂) (t := m₁.support)
+  calc
+    (m₁ + m₂).support.sum (fun i => (m₁ + m₂) i)
+        = (m₁.support ∪ m₂.support).sum (fun i => m₁ i + m₂ i) := by
+            simp [CMonomial.support_add_eq, DFinsupp.add_apply]
+    _ = (m₁.support ∪ m₂.support).sum (fun i => m₁ i) +
+        (m₁.support ∪ m₂.support).sum (fun i => m₂ i) := by
+            simp [Finset.sum_add_distrib]
+    _ = m₁.support.sum (fun i => m₁ i) + m₂.support.sum (fun i => m₂ i) := by
+            simp [hsum₁, hsum₂]
 
 /-- A monomial is squarefree if no variables appear with exponent greater than 1. -/
 def isSquarefree (m : CMonomial σ) : Prop :=
@@ -73,10 +97,6 @@ namespace CMvPolynomial
 variable {σ : Type*} [DecidableEq σ]
 variable {R : Type*} [CommSemiring R]
 
-@[simp] lemma mem_support_iff [DecidableEq R] (p : CMvPolynomial σ R) (m : CMonomial σ) :
-    m ∈ p.support ↔ p m ≠ 0 :=
-  sorry
-
 /-- The variable `xᵢ` as a polynomial. -/
 def X (i : σ) : CMvPolynomial σ R :=
   DirectSum.of (fun _ => R) (CMonomial.X i) 1
@@ -89,8 +109,70 @@ def C (a : R) : CMvPolynomial σ R :=
 def ofMonomial (m : CMonomial σ) (a : R) : CMvPolynomial σ R :=
   DirectSum.of (fun _ => R) m a
 
-lemma support_ofMonomial [DecidableEq R] (m : CMonomial σ) (c : R) (hc : c ≠ 0) :
-    (ofMonomial m c).support = {m} := by
-  sorry
+lemma support_ofMonomial [DecidableEq R] (m : CMonomial σ) (a : R) (ha : a ≠ 0) :
+    (ofMonomial m a).support = {m} := by
+  simpa [ofMonomial] using
+    (DirectSum.support_of (β := fun _ : CMonomial σ => R) m a ha)
+
+@[simp] lemma support_nonempty_iff [DecidableEq R] (f : CMvPolynomial σ R) :
+    f.support.Nonempty ↔ f ≠ 0 := by
+  have h₁ : f.support.Nonempty ↔ f.support ≠ ∅ := by
+    simp only [Finset.nonempty_iff_ne_empty]
+  have h₂ : f.support ≠ ∅ ↔ f ≠ 0 := by
+    simp [DFinsupp.support_eq_empty]; rfl
+  exact Iff.trans h₁ h₂
+
+@[simp] lemma mem_support_iff [DecidableEq R] (f : CMvPolynomial σ R) (m : CMonomial σ) :
+    m ∈ f.support ↔ f m ≠ 0 := by
+  simp only [DFinsupp.mem_support_toFun, ne_eq]
+
+/-- The support of a finite sum is a subset of the union of the supports of its summands. -/
+lemma support_sum_subset [DecidableEq R] {ι : Type*}
+    (s : Finset ι) (f : ι → CMvPolynomial σ R) :
+    (∑ i ∈ s, f i).support ⊆ s.biUnion (fun i => (f i).support) := by
+  classical
+  -- The index set is finite, so we can induct.
+  refine Finset.induction_on s ?_ ?_
+  · simp [DirectSum.support_zero]
+  · intro a s ha hs
+    -- Apply the support-of-addition bound and the induction hypothesis.
+    have hsubset :
+        (f a + ∑ i ∈ s, f i).support ⊆ (f a).support ∪ (∑ i ∈ s, f i).support := by
+      simpa using (DFinsupp.support_add (g₁ := f a) (g₂ := ∑ i ∈ s, f i))
+    have hsubset' :
+        (f a).support ∪ (∑ i ∈ s, f i).support
+          ⊆ (f a).support ∪ s.biUnion (fun i => (f i).support) :=
+      Finset.union_subset_union (subset_refl _) hs
+    simpa [Finset.sum_insert, ha, Finset.biUnion_insert] using (hsubset.trans hsubset')
+
+/-- The support of a product is contained in the pairwise sums of the supports. -/
+lemma support_mul_subset [DecidableEq R] (f g : CMvPolynomial σ R) :
+    (f * g).support ⊆ Finset.image₂ (· + ·) f.support g.support := by
+  classical
+  -- Expand the product as a sum over pairs of support monomials.
+  let mulTerm : CMonomial σ × CMonomial σ → CMvPolynomial σ R := fun ij =>
+    DirectSum.of (fun _ : CMonomial σ => R) (ij.1 + ij.2) (f ij.1 * g ij.2)
+  have mul_eq : f * g =
+      ∑ ij ∈ f.support ×ˢ g.support, mulTerm ij := by
+    simpa [mulTerm] using
+      (DirectSum.mul_eq_sum_support_ghas_mul (A := fun _ : CMonomial σ => R) (a := f) (a' := g))
+  -- The support of a sum is contained in the union of the supports of its terms.
+  have support_subset : (f * g).support ⊆
+      (f.support ×ˢ g.support).biUnion (fun ij => (mulTerm ij).support) := by
+    simpa [mul_eq] using
+      (support_sum_subset (s := f.support ×ˢ g.support) (f := mulTerm))
+  refine support_subset.trans ?_
+  refine (Finset.biUnion_subset).2 ?_
+  intro ij hij
+  -- Each term is supported only on the sum of its indices.
+  have term_support : (mulTerm ij).support ⊆ {ij.1 + ij.2} := by
+    simpa [mulTerm] using
+      (DirectSum.support_of_subset (β := fun _ : CMonomial σ => R)
+        (i := ij.1 + ij.2) (b := (f ij.1) * (g ij.2)))
+  have hij' : ij.1 ∈ f.support ∧ ij.2 ∈ g.support := by
+    simpa [Finset.mem_product] using hij
+  have sum_mem : ij.1 + ij.2 ∈ Finset.image₂ (· + ·) f.support g.support :=
+    Finset.mem_image₂_of_mem hij'.1 hij'.2
+  exact term_support.trans ((Finset.singleton_subset_iff).2 sum_mem)
 
 end CMvPolynomial
