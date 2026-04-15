@@ -138,6 +138,7 @@ lemma support_add_subset [DecidableEq R] (f g : CMvPolynomial σ R) :
 -- The support of a product is contained in the product of the supports of its factors. -/
 lemma support_mul_subset [DecidableEq R] (f g : CMvPolynomial σ R) :
     (f * g).support ⊆ Finset.image₂ (· + ·) f.support g.support := by
+  -- [TO-REVIEW]
   classical
   -- Expand the product as a sum over pairs of support monomials.
   let mulTerm : CMonomial σ × CMonomial σ → CMvPolynomial σ R := fun ij =>

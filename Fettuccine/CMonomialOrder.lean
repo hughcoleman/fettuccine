@@ -199,6 +199,7 @@ lemma leadingMonomial_add_le (f g : CMvPolynomial σ R) :
 /-- The leading monomial of a product is bounded by the product of the leading monomials. -/
 lemma leadingMonomial_mul_le (f g : CMvPolynomial σ R) :
     ord.toSyn in[ord](f * g) ≤ ord.toSyn in[ord](f) + ord.toSyn in[ord](g) := by
+  -- [TO-REVIEW]
   have lm_eq : ord.toSyn in[ord](f * g) = (f * g).support.sup ord.toSyn := by
     simp [leadingMonomial, AddEquiv.apply_symm_apply]
   refine (lm_eq ▸ (Finset.sup_le (s := (f * g).support) (f := fun m => ord.toSyn m)) ?_)

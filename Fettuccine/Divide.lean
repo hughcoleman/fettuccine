@@ -72,6 +72,7 @@ def IsMvQuotientRemainder (f g q r : CMvPolynomial σ R) : Prop :=
     coefficients. -/
 lemma coeff_mul_leadingMonomial_add (f g : CMvPolynomial σ R) (hf : f ≠ 0) (hg : g ≠ 0) :
     (f * g) (in[ord](f) + in[ord](g)) = f in[ord](f) * g in[ord](g) := by
+  -- [TO-REVIEW]
   have hfmem : in[ord](f) ∈ f.support := leadingMonomial_mem_support (ord := ord) f hf
   have hgmem : in[ord](g) ∈ g.support := leadingMonomial_mem_support (ord := ord) g hg
   rw [DirectSum.mul_eq_sum_support_ghas_mul
@@ -131,6 +132,7 @@ lemma coeff_mul_leadingMonomial_add (f g : CMvPolynomial σ R) (hf : f ≠ 0) (h
 /-- The leading monomial of a product is the product of the leading monomials. -/
 lemma leadingMonomial_mul (f g : CMvPolynomial σ R) (hf : f ≠ 0) (hg : g ≠ 0) :
     in[ord](f * g) = in[ord](f) + in[ord](g) := by
+  -- [TO-REVIEW]
   classical
   -- One direction holds even when `R` is not a domain; we can lift this from `CMonomialOrder.lean`.
   have hle : ord.toSyn in[ord](f * g) ≤ ord.toSyn in[ord](f) + ord.toSyn in[ord](g) :=
@@ -156,6 +158,7 @@ lemma leadingMonomial_mul (f g : CMvPolynomial σ R) (hf : f ≠ 0) (hg : g ≠ 
 
 /-- If `R` is nontrivial, then a polynomial ring over `R` is also non-trivial. -/
 instance nontrivial : Nontrivial (CMvPolynomial σ R) where
+  -- [TO-REVIEW]
   exists_pair_ne := by
     -- Lift distinct elements of `R` to distinct constant polynomials.
     obtain ⟨a, b, hxy⟩ := exists_pair_ne R
@@ -167,6 +170,7 @@ instance nontrivial : Nontrivial (CMvPolynomial σ R) where
 set_option linter.unusedDecidableInType false in
 /-- If `R` is a domain, then a polynomial ring over `R` is also a domain. -/
 instance noZeroDivisors : NoZeroDivisors (CMvPolynomial σ R) where
+  -- [TO-REVIEW]
   eq_zero_or_eq_zero_of_mul_eq_zero := by
     intro a b h
     by_cases ha : a = 0
@@ -199,6 +203,7 @@ lemma terminationMeasure_sub_strict_of_same_leadingData (f h : CMvPolynomial σ 
     Prod.Lex (fun x1 x2 => x1 < x2) (fun a₁ a₂ => a₁ < a₂)
       (ord.toSyn in[ord](f - h), (f - h).support.card)
       (ord.toSyn in[ord](f)    ,       f.support.card) := by
+  -- [TO-REVIEW]
   rw [Prod.lex_def]
   have hs : (f - h).support ⊆ f.support ∪ h.support := by
     have hneg : (-h).support = h.support := DFinsupp.support_neg (f := h)
@@ -249,6 +254,7 @@ lemma mvDivide_decreases_none_branch (f g : CMvPolynomial σ R) (hf : f ≠ 0)
     Prod.Lex (fun x1 x2 => x1 < x2) (fun a₁ a₂ => a₁ < a₂)
       (ord.toSyn in[ord](f - leadingTerm ord f), (f - leadingTerm ord f).support.card)
       (ord.toSyn in[ord](f)                    ,                       f.support.card) := by
+  -- [TO-REVIEW]
   have hfmem : in[ord](f) ∈ f.support := leadingMonomial_mem_support (ord := ord) f hf
   have hfcoeff : leadingCoefficient ord f ≠ 0 := (mem_support_iff f in[ord](f)).1 hfmem
   have hlm : in[ord](leadingTerm ord f) = in[ord](f) := by
@@ -274,6 +280,7 @@ lemma mvDivide_decreases_some_branch (f g : CMvPolynomial σ R) (hf : f ≠ 0) (
     Prod.Lex (fun x1 x2 => x1 < x2) (fun a₁ a₂ => a₁ < a₂)
       (ord.toSyn in[ord](f - c * g), (f - c * g).support.card)
       (ord.toSyn in[ord](f)        ,           f.support.card) := by
+  -- [TO-REVIEW]
   classical
   dsimp
   have hfmem : in[ord](f) ∈ f.support := leadingMonomial_mem_support (ord := ord) f hf
@@ -339,6 +346,7 @@ lemma mvDivide_decreases_some_branch (f g : CMvPolynomial σ R) (hf : f ≠ 0) (
 set_option linter.unusedVariables false in
 /-- The division algorithm for multivariate polynomials. -/
 def mvDivide (f g : CMvPolynomial σ R) (hg : g ≠ 0) : CMvPolynomial σ R × CMvPolynomial σ R :=
+  -- [TO-REVIEW]
   if hf : f = 0 then
     (0, 0)
   else
@@ -382,11 +390,11 @@ theorem mvDivide.unique {f g q₁ q₂ r₁ r₂ : CMvPolynomial σ R} (hg : g �
   -- Since we're working in an integral domain, it follows that `r₂ - r₁ ≠ 0`, and therefore
   -- `in(r₂ - r₁)` lies in the support of either `r₁` or `r₂`.
   have hr0 : r₂ - r₁ ≠ 0 := by
+    -- We need to bring `NoZeroDivisors` into the context here, because the `noZeroDivisors`
+    -- construction requires a monomial order to operate. (FIXME: Use the fact that at least one
+    -- monomial order exists, i.e. `lex`, to eliminate this?)
     haveI : NoZeroDivisors (CMvPolynomial σ R) := noZeroDivisors (ord := ord)
-    have hmul0 : g * (q₁ - q₂) ≠ 0 := mul_ne_zero hg hq0
-    intro hr
-    apply hmul0
-    rw [h, hr]
+    aesop
   have hmem : in[ord](r₂ - r₁) ∈ r₁.support ∪ r₂.support := by
     have h₁ : in[ord](r₂ + (-r₁)) ∈ r₂.support ∪ (-r₁).support := by
       exact leadingMonomial_add_mem (ord := ord) r₂ (-r₁)
@@ -413,6 +421,7 @@ theorem mvDivide.unique {f g q₁ q₂ r₁ r₂ : CMvPolynomial σ R} (hg : g �
 theorem mvDivide.correct (f g : CMvPolynomial σ R) (hg : g ≠ 0) :
     let (q, r) := mvDivide ord f g hg
     IsMvQuotientRemainder ord f g q r := by
+  -- [TO-REVIEW]
   classical
   let motive : CMvPolynomial σ R → Prop := fun x =>
     let (q, r) := mvDivide ord x g hg
