@@ -142,91 +142,89 @@ variable {R : Type*} [DecidableEq R] [CommSemiring R]
 
 namespace CMvPolynomial
 
-/-- The **leading monomial** of a polynomial `f` with respect to a monomial order `ord`. By
-    convention, this is typically zero for the zero polynomial but we are good computer scientists
-    so we will use the `Option` type. -/
+/-- The **leading monomial** of a polynomial `f` with respect to a monomial order `ord`. -/
 def leadingMonomial (f : CMvPolynomial σ R) : CMonomial σ :=
   ord.toSyn.symm (f.support.sup ord.toSyn)
 
--- Notation for leading monomials with an explicit order.
-scoped notation:50 "lm[" ord:25 "](" f:50 ")" =>
-  CMvPolynomial.leadingMonomial (ord := ord) f
+/-- Notation for the leading monomial of a polynomial under a given monomial order. -/
+-- `max` is used to ensure that the notation binds as if it were function application.
+scoped notation:max "in[" ord "](" f ")" =>
+  (CMvPolynomial.leadingMonomial ord f)
 
 /-- The leading monomial of the zero polynomial is zero. -/
-@[simp] lemma leadingMonomial_zero : (0 : CMvPolynomial σ R).leadingMonomial ord = 0 := by
-  simp [leadingMonomial, DirectSum.support_zero]
-  rfl
+@[simp] lemma leadingMonomial_zero : in[ord]((0 : CMvPolynomial σ R)) = 0 := by
+  simp [leadingMonomial, DirectSum.support_zero]; rfl
 
 /-- The monomials of a polynomial are bounded by the leading monomial. -/
 @[simp] lemma le_leadingMonomial (f : CMvPolynomial σ R) (m : CMonomial σ) (hm : m ∈ f.support) :
-    ord.toSyn m ≤ ord.toSyn (lm[ord](f)) := by
+    ord.toSyn m ≤ ord.toSyn in[ord](f) := by
   simp only [leadingMonomial, AddEquiv.apply_symm_apply]
   exact Finset.le_sup hm
 
 /-- The leading monomial of a non-zero polynomial is an element of its support. -/
 @[simp] lemma leadingMonomial_mem_support (f : CMvPolynomial σ R) (hf : f ≠ 0) :
-    (lm[ord](f)) ∈ f.support := by
-  simp only [leadingMonomial]
+    in[ord](f) ∈ f.support := by
   have hne : f.support.Nonempty := by
     exact (support_nonempty_iff f).mpr hf
-  -- Obtain a witness.
-  obtain ⟨m, hm, hsup⟩ := Finset.exists_mem_eq_sup f.support hne ord.toSyn
-  simpa [hsup] using hm
+  -- Since the polynomial has non-empty support, the supremum is attained, and by the leading
+  -- monomial. So in particular, the leading monomial is a member of the support.
+  obtain ⟨m, hm, hmsup⟩ := Finset.exists_mem_eq_sup f.support hne ord.toSyn
+  rwa [leadingMonomial, hmsup, AddEquiv.symm_apply_apply]
 
-/-- The leading monomial of a single term a*m is m if a ≠ 0. -/
+/-- If a ≠ 0, then the leading monomial of the monomial polynomial a*m is m. -/
 lemma leadingMonomial_monomial (m : CMonomial σ) (a : R) (ha : a ≠ 0) :
-    (lm[ord](CMvPolynomial.ofMonomial m a)) = m := by
+    in[ord](CMvPolynomial.ofMonomial m a) = m := by
   simp [leadingMonomial, CMvPolynomial.support_ofMonomial m a ha]
 
-/-- The leading monomial of a sum is bounded by the leading monomials of the summands. -/
-lemma leadingMonomial_sum_le {ι : Type*} (s : Finset ι) (f : ι → CMvPolynomial σ R) :
-    ord.toSyn (lm[ord](∑ i ∈ s, f i)) ≤ s.sup (fun i => ord.toSyn (lm[ord](f i))) := by
-  classical
-  -- Unfold the definition: leading monomial = supremum of the support.
-  have lm_eq :
-      ord.toSyn (lm[ord](∑ i ∈ s, f i)) = (∑ i ∈ s, f i).support.sup ord.toSyn := by
-    simp [leadingMonomial, AddEquiv.apply_symm_apply]
-  refine (lm_eq ▸ Finset.sup_le ?_)
-  intro m hm
-  -- A monomial in the sum's support appears in some summand's support.
-  rcases (Finset.mem_biUnion.mp ((CMvPolynomial.support_sum_subset s f) hm)) with ⟨i, hi, hmi⟩
-  calc
-    ord.toSyn m ≤ ord.toSyn (lm[ord](f i)) := le_leadingMonomial ord (f i) m hmi
-    _           ≤ s.sup (fun i => ord.toSyn (lm[ord](f i))) :=
-                    (Finset.le_sup (s := s) (f := fun i => ord.toSyn (lm[ord](f i))) hi)
+-- /-- The leading monomial of a sum is bounded by the leading monomials of the summands. -/
+-- lemma leadingMonomial_sum_le {ι : Type*} (s : Finset ι) (f : ι → CMvPolynomial σ R) :
+--     ord.toSyn in[ord](∑ i ∈ s, f i) ≤ s.sup (fun i => ord.toSyn in[ord](f i)) := by
+--   classical
+--   -- Unfold the definition: leading monomial = supremum of the support.
+--   have lm_eq :
+--       ord.toSyn in[ord](∑ i ∈ s, f i) = (∑ i ∈ s, f i).support.sup ord.toSyn := by
+--     simp [leadingMonomial, AddEquiv.apply_symm_apply]
+--   refine (lm_eq ▸ Finset.sup_le ?_)
+--   intro m hm
+--   -- A monomial in the sum's support appears in some summand's support.
+--   rcases (Finset.mem_biUnion.mp ((CMvPolynomial.support_sum_subset s f) hm)) with ⟨i, hi, hmi⟩
+--   calc
+--     ord.toSyn m ≤ ord.toSyn in[ord](f i) := le_leadingMonomial ord (f i) m hmi
+--     _           ≤ s.sup (fun i => ord.toSyn in[ord](f i)) :=
+--                     (Finset.le_sup (s := s) (f := fun i => ord.toSyn in[ord](f i)) hi)
 
-lemma leadingMonomial_sum_le₂ (f g : CMvPolynomial σ R) :
-    ord.toSyn (lm[ord](f + g)) ≤ ord.toSyn (lm[ord](f)) ⊔ ord.toSyn (lm[ord](g)) := by
-  classical
-  -- Use a bool-indexed family and apply the previous lemma.
-  let σ : Bool → CMvPolynomial σ R := fun b => if b then f else g
-  simpa [σ, Finset.sum_insert, Finset.sum_singleton, Finset.sup_insert, Finset.sup_singleton]
-    using (leadingMonomial_sum_le ord ({true, false} : Finset Bool) σ)
+-- lemma leadingMonomial_sum_le₂ (f g : CMvPolynomial σ R) :
+--     ord.toSyn in[ord](f + g) ≤ ord.toSyn in[ord](f) ⊔ ord.toSyn in[ord](g) := by
+--   classical
+--   -- Use a bool-indexed family and apply the previous lemma.
+--   let σ : Bool → CMvPolynomial σ R := fun b => if b then f else g
+--   simpa [σ, Finset.sum_insert, Finset.sum_singleton, Finset.sup_insert, Finset.sup_singleton]
+--     using (leadingMonomial_sum_le ord ({true, false} : Finset Bool) σ)
 
-/-- The leading monomial of a product is bounded by the sum of the leading monomials. -/
-lemma leadingMonomial_mul_le₂ (f g : CMvPolynomial σ R) :
-    ord.toSyn (lm[ord](f * g)) ≤ ord.toSyn (lm[ord](f)) + ord.toSyn (lm[ord](g)) := by
-  classical
-  have lm_eq : ord.toSyn (lm[ord](f * g)) = (f * g).support.sup ord.toSyn := by
-    simp [leadingMonomial, AddEquiv.apply_symm_apply]
-  -- Reduce to bounding each support monomial of the product.
-  refine (lm_eq ▸ (Finset.sup_le (s := (f * g).support) (f := fun m => ord.toSyn m)) ?_)
-  intro m hm
-  -- Any product monomial is a sum of support monomials from f and g.
-  have hm' : m ∈ Finset.image₂ (· + ·) f.support g.support := by
-    exact (CMvPolynomial.support_mul_subset f g) hm
-  rcases (Finset.mem_image₂.mp hm') with ⟨m₁, hm₁, m₂, hm₂, rfl⟩
-  have h₁ : ord.toSyn m₁ ≤ ord.toSyn (lm[ord](f)) := le_leadingMonomial ord f m₁ hm₁
-  have h₂ : ord.toSyn m₂ ≤ ord.toSyn (lm[ord](g)) := le_leadingMonomial ord g m₂ hm₂
-  simpa [ord.toSyn.map_add] using add_le_add h₁ h₂
+-- /-- The leading monomial of a product is bounded by the sum of the leading monomials. -/
+-- lemma leadingMonomial_mul_le₂ (f g : CMvPolynomial σ R) :
+--     ord.toSyn in[ord](f * g) ≤ ord.toSyn in[ord](f) + ord.toSyn in[ord](g) := by
+--   classical
+--   have lm_eq : ord.toSyn in[ord](f * g) = (f * g).support.sup ord.toSyn := by
+--     simp [leadingMonomial, AddEquiv.apply_symm_apply]
+--   -- Reduce to bounding each support monomial of the product.
+--   refine (lm_eq ▸ (Finset.sup_le (s := (f * g).support) (f := fun m => ord.toSyn m)) ?_)
+--   intro m hm
+--   -- Any product monomial is a sum of support monomials from f and g.
+--   have hm' : m ∈ Finset.image₂ (· + ·) f.support g.support := by
+--     exact (CMvPolynomial.support_mul_subset f g) hm
+--   rcases (Finset.mem_image₂.mp hm') with ⟨m₁, hm₁, m₂, hm₂, rfl⟩
+--   have h₁ : ord.toSyn m₁ ≤ ord.toSyn in[ord](f) := le_leadingMonomial ord f m₁ hm₁
+--   have h₂ : ord.toSyn m₂ ≤ ord.toSyn in[ord](g) := le_leadingMonomial ord g m₂ hm₂
+--   simpa [ord.toSyn.map_add] using add_le_add h₁ h₂
 
 /-- The **leading coefficient** of a polynomial is the coefficient of its leading monomial. -/
 def leadingCoefficient (f : CMvPolynomial σ R) : R :=
-  f (lm[ord](f))
+  f in[ord](f)
 
 /-- The **leading term** of a polynomial is the leading monomial alongside its coefficient. -/
-def leadingTerm (f : CMvPolynomial σ R) : CMonomial σ × R :=
-  (lm[ord](f), leadingCoefficient (ord := ord) f)
+def leadingTerm (f : CMvPolynomial σ R) : CMvPolynomial σ R :=
+  CMvPolynomial.ofMonomial in[ord](f) (leadingCoefficient ord f)
 
 end CMvPolynomial
 
