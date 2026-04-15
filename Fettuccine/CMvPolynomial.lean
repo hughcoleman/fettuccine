@@ -83,6 +83,10 @@ lemma degree_add (m₁ m₂ : CMonomial σ) : degree (m₁ + m₂) = degree m₁
 def isSquarefree (m : CMonomial σ) : Prop :=
   ∀ x ∈ m.support, m x = 1 -- (zero is implicitly excluded from the support)
 
+/-- Least common multiple of monomials, computed pointwise. -/
+def lcm (m₁ m₂ : CMonomial σ) : CMonomial σ :=
+  DFinsupp.zipWith (fun _ a b => max a b) (fun _ => by simp) m₁ m₂
+
 end CMonomial
 
 /-! ## CMvPolynomial -/

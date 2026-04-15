@@ -3,7 +3,7 @@ import Mathlib.Algebra.Group.TransferInstance
 import Mathlib.Data.DFinsupp.Lex
 
 /-!
-# Graded lexicographic order on monomials
+# The Graded Lexicographic Order on Monomials
 
 This file provides an implementation of the graded lexicographic order on monomials. For the most
 part, the structure of this file largely mirrors the implementation of the "homogeneous

@@ -220,6 +220,14 @@ lemma leadingMonomial_mul_le₂ (f g : CMvPolynomial σ R) :
   have h₂ : ord.toSyn m₂ ≤ ord.toSyn (lm[ord](g)) := le_leadingMonomial ord g m₂ hm₂
   simpa [ord.toSyn.map_add] using add_le_add h₁ h₂
 
+/-- The **leading coefficient** of a polynomial is the coefficient of its leading monomial. -/
+def leadingCoefficient (f : CMvPolynomial σ R) : R :=
+  f (lm[ord](f))
+
+/-- The **leading term** of a polynomial is the leading monomial alongside its coefficient. -/
+def leadingTerm (f : CMvPolynomial σ R) : CMonomial σ × R :=
+  (lm[ord](f), leadingCoefficient (ord := ord) f)
+
 end CMvPolynomial
 
 end LeadingMonomial
