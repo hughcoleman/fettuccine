@@ -130,53 +130,55 @@ lemma support_ofMonomial [DecidableEq R] (m : CMonomial σ) (a : R) (ha : a ≠ 
     m ∈ f.support ↔ f m ≠ 0 := by
   simp only [DFinsupp.mem_support_toFun, ne_eq]
 
--- /-- The support of a finite sum is a subset of the union of the supports of its summands. -/
--- lemma support_sum_subset [DecidableEq R] {ι : Type*}
---     (s : Finset ι) (f : ι → CMvPolynomial σ R) :
---     (∑ i ∈ s, f i).support ⊆ s.biUnion (fun i => (f i).support) := by
---   classical
---   -- The index set is finite, so we can induct.
---   refine Finset.induction_on s ?_ ?_
---   · simp [DirectSum.support_zero]
---   · intro a s ha hs
---     -- Apply the support-of-addition bound and the induction hypothesis.
---     have hsubset :
---         (f a + ∑ i ∈ s, f i).support ⊆ (f a).support ∪ (∑ i ∈ s, f i).support := by
---       simpa using (DFinsupp.support_add (g₁ := f a) (g₂ := ∑ i ∈ s, f i))
---     have hsubset' :
---         (f a).support ∪ (∑ i ∈ s, f i).support
---           ⊆ (f a).support ∪ s.biUnion (fun i => (f i).support) :=
---       Finset.union_subset_union (subset_refl _) hs
---     simpa [Finset.sum_insert, ha, Finset.biUnion_insert] using (hsubset.trans hsubset')
+/-- The support of a sum is contained in the union of the supports of its summands. -/
+lemma support_add_subset [DecidableEq R] (f g : CMvPolynomial σ R) :
+    (f + g).support ⊆ f.support ∪ g.support := by
+  exact DFinsupp.support_add
 
--- /-- The support of a product is contained in the pairwise sums of the supports. -/
--- lemma support_mul_subset [DecidableEq R] (f g : CMvPolynomial σ R) :
---     (f * g).support ⊆ Finset.image₂ (· + ·) f.support g.support := by
---   classical
---   -- Expand the product as a sum over pairs of support monomials.
---   let mulTerm : CMonomial σ × CMonomial σ → CMvPolynomial σ R := fun ij =>
---     DirectSum.of (fun _ : CMonomial σ => R) (ij.1 + ij.2) (f ij.1 * g ij.2)
---   have mul_eq : f * g =
---       ∑ ij ∈ f.support ×ˢ g.support, mulTerm ij := by
---     simpa [mulTerm] using
---       (DirectSum.mul_eq_sum_support_ghas_mul (A := fun _ : CMonomial σ => R) (a := f) (a' := g))
---   -- The support of a sum is contained in the union of the supports of its terms.
---   have support_subset : (f * g).support ⊆
---       (f.support ×ˢ g.support).biUnion (fun ij => (mulTerm ij).support) := by
---     simpa [mul_eq] using
---       (support_sum_subset (s := f.support ×ˢ g.support) (f := mulTerm))
---   refine support_subset.trans ?_
---   refine (Finset.biUnion_subset).2 ?_
---   intro ij hij
---   -- Each term is supported only on the sum of its indices.
---   have term_support : (mulTerm ij).support ⊆ {ij.1 + ij.2} := by
---     simpa [mulTerm] using
---       (DirectSum.support_of_subset (β := fun _ : CMonomial σ => R)
---         (i := ij.1 + ij.2) (b := (f ij.1) * (g ij.2)))
---   have hij' : ij.1 ∈ f.support ∧ ij.2 ∈ g.support := by
---     simpa [Finset.mem_product] using hij
---   have sum_mem : ij.1 + ij.2 ∈ Finset.image₂ (· + ·) f.support g.support :=
---     Finset.mem_image₂_of_mem hij'.1 hij'.2
---   exact term_support.trans ((Finset.singleton_subset_iff).2 sum_mem)
+-- The support of a product is contained in the product of the supports of its factors. -/
+lemma support_mul_subset [DecidableEq R] (f g : CMvPolynomial σ R) :
+    (f * g).support ⊆ Finset.image₂ (· + ·) f.support g.support := by
+  classical
+  -- Expand the product as a sum over pairs of support monomials.
+  let mulTerm : CMonomial σ × CMonomial σ → CMvPolynomial σ R := fun ij =>
+    DirectSum.of (fun _ : CMonomial σ => R) (ij.1 + ij.2) (f ij.1 * g ij.2)
+  have mul_eq : f * g =
+      ∑ ij ∈ f.support ×ˢ g.support, mulTerm ij := by
+    simpa [mulTerm] using
+      (DirectSum.mul_eq_sum_support_ghas_mul (A := fun _ : CMonomial σ => R) (a := f) (a' := g))
+  have support_sum_subset :
+      ∀ s : Finset (CMonomial σ × CMonomial σ),
+        (∑ ij ∈ s, mulTerm ij).support ⊆ s.biUnion (fun ij => (mulTerm ij).support) := by
+    intro s
+    refine Finset.induction_on s ?_ ?_
+    · simp [DirectSum.support_zero]
+    · intro a s ha hs
+      have hsubset :
+          (mulTerm a + ∑ ij ∈ s, mulTerm ij).support
+            ⊆ (mulTerm a).support ∪ (∑ ij ∈ s, mulTerm ij).support := by
+        simpa using (DFinsupp.support_add (g₁ := mulTerm a) (g₂ := ∑ ij ∈ s, mulTerm ij))
+      have hsubset' :
+          (mulTerm a).support ∪ (∑ ij ∈ s, mulTerm ij).support
+            ⊆ (mulTerm a).support ∪ s.biUnion (fun ij => (mulTerm ij).support) :=
+        Finset.union_subset_union (subset_refl _) hs
+      simpa [Finset.sum_insert, ha, Finset.biUnion_insert] using (hsubset.trans hsubset')
+  -- The support of a sum is contained in the union of the supports of its terms.
+  have support_subset : (f * g).support ⊆
+      (f.support ×ˢ g.support).biUnion (fun ij => (mulTerm ij).support) := by
+    simpa [mul_eq] using
+      (support_sum_subset (f.support ×ˢ g.support))
+  refine support_subset.trans ?_
+  refine (Finset.biUnion_subset).2 ?_
+  intro ij hij
+  -- Each term is supported only on the sum of its indices.
+  have term_support : (mulTerm ij).support ⊆ {ij.1 + ij.2} := by
+    simpa [mulTerm] using
+      (DirectSum.support_of_subset (β := fun _ : CMonomial σ => R)
+        (i := ij.1 + ij.2) (b := (f ij.1) * (g ij.2)))
+  have hij' : ij.1 ∈ f.support ∧ ij.2 ∈ g.support := by
+    simpa [Finset.mem_product] using hij
+  have sum_mem : ij.1 + ij.2 ∈ Finset.image₂ (· + ·) f.support g.support :=
+    Finset.mem_image₂_of_mem hij'.1 hij'.2
+  exact term_support.trans ((Finset.singleton_subset_iff).2 sum_mem)
 
 end CMvPolynomial
