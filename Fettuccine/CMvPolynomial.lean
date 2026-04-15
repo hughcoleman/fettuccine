@@ -135,7 +135,7 @@ lemma support_add_subset [DecidableEq R] (f g : CMvPolynomial σ R) :
     (f + g).support ⊆ f.support ∪ g.support := by
   exact DFinsupp.support_add
 
--- The support of a product is contained in the product of the supports of its factors. -/
+/-- The support of a product is contained in the product of the supports of its factors. -/
 lemma support_mul_subset [DecidableEq R] (f g : CMvPolynomial σ R) :
     (f * g).support ⊆ Finset.image₂ (· + ·) f.support g.support := by
   -- [TO-REVIEW]
@@ -181,5 +181,15 @@ lemma support_mul_subset [DecidableEq R] (f g : CMvPolynomial σ R) :
   have sum_mem : ij.1 + ij.2 ∈ Finset.image₂ (· + ·) f.support g.support :=
     Finset.mem_image₂_of_mem hij'.1 hij'.2
   exact term_support.trans ((Finset.singleton_subset_iff).2 sum_mem)
+
+/-- If the coefficient ring is nontrivial, then so is the polynomial ring. -/
+instance [Nontrivial R] : Nontrivial (CMvPolynomial σ R) where
+  exists_pair_ne := by
+    -- [TO-REVIEW]
+    obtain ⟨a, b, hne⟩ := exists_pair_ne R
+    refine ⟨CMvPolynomial.C a, CMvPolynomial.C b, ?_⟩
+    intro hC
+    apply hne
+    exact congrArg (fun p : CMvPolynomial σ R => p 0) hC
 
 end CMvPolynomial

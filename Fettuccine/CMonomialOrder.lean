@@ -1,4 +1,5 @@
 import Fettuccine.CMvPolynomial
+import Mathlib.Algebra.DirectSum.Internal
 import Mathlib.Data.DFinsupp.WellFounded
 
 /-!
@@ -211,6 +212,70 @@ lemma leadingMonomial_mul_le (f g : CMvPolynomial σ R) :
   have h₂ : ord.toSyn m₂ ≤ ord.toSyn in[ord](g) := le_leadingMonomial (ord := ord) g m₂ hm₂
   simpa [ord.toSyn.map_add] using add_le_add h₁ h₂
 
+/-- The coefficient of the product at the sum of leading monomials is the product of leading
+    coefficients. -/
+lemma coeff_mul_leadingMonomial_add (f g : CMvPolynomial σ R) (hf : f ≠ 0) (hg : g ≠ 0) :
+    (f * g) (in[ord](f) + in[ord](g)) = f in[ord](f) * g in[ord](g) := by
+  -- [TO-REVIEW]
+  have hfmem : in[ord](f) ∈ f.support := leadingMonomial_mem_support (ord := ord) f hf
+  have hgmem : in[ord](g) ∈ g.support := leadingMonomial_mem_support (ord := ord) g hg
+  rw [DirectSum.mul_eq_sum_support_ghas_mul
+    (A := fun _ : CMonomial σ => R) (a := f) (a' := g)]
+  change
+    (∑ ij ∈ f.support ×ˢ g.support,
+        (DirectSum.of (fun _ : CMonomial σ => R) (ij.1 + ij.2) (f ij.1 * g ij.2)))
+      (in[ord](f) + in[ord](g)) = f in[ord](f) * g in[ord](g)
+  let s : Finset (CMonomial σ × CMonomial σ) := f.support ×ˢ g.support
+  let term : CMonomial σ × CMonomial σ → CMvPolynomial σ R :=
+    fun ij => DirectSum.of (fun _ : CMonomial σ => R) (ij.1 + ij.2) (f ij.1 * g ij.2)
+  let n : CMonomial σ := in[ord](f) + in[ord](g)
+  have h_expand1 : (∑ ij ∈ s, term ij) n = ∑ ij ∈ s, (term ij) n := by
+    exact DFinsupp.finset_sum_apply (s := s) (g := term) (i := n)
+  have h_expand2 :
+      (∑ ij ∈ s, (term ij) n)
+        = ∑ ij ∈ s, (if ij.1 + ij.2 = n then (f ij.1 * g ij.2 : R) else 0) := by
+    simp [term, n, DirectSum.of_apply]
+  have h_expand :
+      (∑ ij ∈ f.support ×ˢ g.support,
+          (DirectSum.of (fun _ : CMonomial σ => R) (ij.1 + ij.2) (f ij.1 * g ij.2)))
+        (in[ord](f) + in[ord](g))
+        = ∑ ij ∈ s, (if ij.1 + ij.2 = n then (f ij.1 * g ij.2 : R) else 0) := by
+    simpa [s, term, n] using h_expand1.trans h_expand2
+  rw [h_expand]
+  have hsingle :
+      (∑ ij ∈ s, (if ij.1 + ij.2 = n then (f ij.1 * g ij.2 : R) else 0))
+        = (if (in[ord](f), in[ord](g)).1 + (in[ord](f), in[ord](g)).2 = n
+            then (f (in[ord](f), in[ord](g)).1 * g (in[ord](f), in[ord](g)).2 : R)
+            else 0) := by
+    refine Finset.sum_eq_single
+        (s := s)
+        (f := fun ij => if ij.1 + ij.2 = n then (f ij.1 * g ij.2 : R) else 0)
+        (a := (in[ord](f), in[ord](g))) ?_ ?_
+    · intro ij hij hneq
+      by_cases hij_sum : ij.1 + ij.2 = n
+      · have hij_mem : ij ∈ f.support ×ˢ g.support := by simpa [s] using hij
+        have hij_sum' : ij.1 + ij.2 = in[ord](f) + in[ord](g) := by simpa [n] using hij_sum
+        have hij₁_mem : ij.1 ∈ f.support := (Finset.mem_product.mp hij_mem).1
+        have hij₂_mem : ij.2 ∈ g.support := (Finset.mem_product.mp hij_mem).2
+        have hij₁_le : ord.toSyn ij.1 ≤ ord.toSyn in[ord](f) :=
+          le_leadingMonomial (ord := ord) f ij.1 hij₁_mem
+        have hij₂_le : ord.toSyn ij.2 ≤ ord.toSyn in[ord](g) :=
+          le_leadingMonomial (ord := ord) g ij.2 hij₂_mem
+        have hij_eq : ij.1 = in[ord](f) ∧ ij.2 = in[ord](g) :=
+          ord.eq_of_add_eq_of_le hij₁_le hij₂_le hij_sum'
+        have : ij = (in[ord](f), in[ord](g)) := Prod.ext hij_eq.1 hij_eq.2
+        exact (hneq this).elim
+      · simp [hij_sum]
+    · intro hnot
+      have hpairmem : (in[ord](f), in[ord](g)) ∈ f.support ×ˢ g.support :=
+        Finset.mem_product.mpr ⟨hfmem, hgmem⟩
+      exfalso
+      exact hnot (by simpa [s] using hpairmem)
+  have htop :
+      (in[ord](f), in[ord](g)).1 + (in[ord](f), in[ord](g)).2 = n := by
+    simp [n]
+  simpa [htop] using hsingle
+
 /-- The **leading coefficient** of a polynomial is the coefficient of its leading monomial. -/
 def leadingCoefficient (f : CMvPolynomial σ R) : R :=
   f in[ord](f)
@@ -218,6 +283,31 @@ def leadingCoefficient (f : CMvPolynomial σ R) : R :=
 /-- The **leading term** of a polynomial is the leading monomial alongside its coefficient. -/
 def leadingTerm (f : CMvPolynomial σ R) : CMvPolynomial σ R :=
   CMvPolynomial.ofMonomial in[ord](f) (leadingCoefficient ord f)
+
+/-- The leading monomial of a product is the sum of the leading monomials. -/
+lemma leadingMonomial_mul [NoZeroDivisors R] (f g : CMvPolynomial σ R) (hf : f ≠ 0) (hg : g ≠ 0) :
+    in[ord](f * g) = in[ord](f) + in[ord](g) := by
+  -- [TO-REVIEW]
+  classical
+  have hle : ord.toSyn in[ord](f * g) ≤ ord.toSyn in[ord](f) + ord.toSyn in[ord](g) :=
+    leadingMonomial_mul_le (ord := ord) f g
+  have hmem_top : in[ord](f) + in[ord](g) ∈ (f * g).support := by
+    have hfmem : in[ord](f) ∈ f.support := leadingMonomial_mem_support (ord := ord) f hf
+    have hgmem : in[ord](g) ∈ g.support := leadingMonomial_mem_support (ord := ord) g hg
+    have hfcoeff : leadingCoefficient ord f ≠ 0 := (mem_support_iff f in[ord](f)).1 hfmem
+    have hgcoeff : leadingCoefficient ord g ≠ 0 := (mem_support_iff g in[ord](g)).1 hgmem
+    have hcoeff_top := coeff_mul_leadingMonomial_add (ord := ord) f g hf hg
+    have hfgcoeff : (f * g) (in[ord](f) + in[ord](g)) ≠ 0 := by
+      rw [hcoeff_top]
+      exact mul_ne_zero hfcoeff hgcoeff
+    exact (mem_support_iff (f * g) (in[ord](f) + in[ord](g))).2 hfgcoeff
+  have hge : ord.toSyn in[ord](f) + ord.toSyn in[ord](g) ≤ ord.toSyn in[ord](f * g) := by
+    have htop : ord.toSyn (in[ord](f) + in[ord](g)) ≤ ord.toSyn in[ord](f * g) :=
+      le_leadingMonomial (ord := ord) (f * g) (in[ord](f) + in[ord](g)) hmem_top
+    simpa [ord.toSyn.map_add] using htop
+  have hsyn : ord.toSyn in[ord](f * g) = ord.toSyn in[ord](f) + ord.toSyn in[ord](g) :=
+    le_antisymm hle hge
+  exact ord.toSyn.injective (by simpa [ord.toSyn.map_add] using hsyn)
 
 end CMvPolynomial
 
