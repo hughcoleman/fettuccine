@@ -60,6 +60,13 @@ example : xy + x = y + x2 := by
 open CMonomialOrder
 open scoped CMonomialOrder
 
+example : (y ≺[lex] x) := by
+  decide
+
+-- This is backwards to how it should be...?
+example : (x ≺[grevlex] y) := by
+  decide
+
 example : (x ≺[lex] x2) ∧ (xy ≺[lex] x2) ∧ (yz ≺[lex] xy)
     ∧ (xy ≺[lex] x2) ∧ (xy ≺[lex] x2 + y) := by
   decide
@@ -99,6 +106,7 @@ def f₂ : CMvPolynomial σ Int := 0
 section
 #eval f₁.leadingMonomial lex
 #eval f₂.leadingMonomial lex
+-- DO NOT UNCOMMENT; these segfault Lean.
 -- #eval f₁.leadingMonomial grlex
 -- #eval f₂.leadingMonomial grlex
 -- #eval f₁.leadingMonomial grevlex
