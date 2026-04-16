@@ -63,7 +63,6 @@ open scoped CMonomialOrder
 example : (y ≺[lex] x) := by
   decide
 
--- This is backwards to how it should be...?
 example : (x ≺[grevlex] y) := by
   decide
 
