@@ -27,9 +27,10 @@ def f₁ := 3*x^2 + 2*y^3 + 3*z + 1
 def f₂ := 2*x^2 + 1*y^3 + 4*z
 def f₃ := x^2*y^3 + 2*x*y^2 + 3*z^2 + 1
 
-#eval f₁.support
-#eval (f₁ + f₂).support
-#eval (f₁ * f₂ * f₃).support
+-- Render polynomials using an explicit monomial order.
+#eval f₁.withOrdering CMonomialOrder.lex
+#eval (f₁ + f₂).withOrdering CMonomialOrder.grlex
+#eval (0 : CMvPolynomial σ Int).withOrdering CMonomialOrder.lex
 
 -- We can also compute with polynomials.
 example : 3*x^2 ≠ 0 ∧ 2*y^3 ≠ 0 ∧ 3*z + 1 ≠ 0 ∧ 1 ≠ 0 := by
