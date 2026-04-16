@@ -99,8 +99,8 @@ def f₂ : CMvPolynomial σ Int := 0
 section
 #eval f₁.leadingMonomial lex
 #eval f₂.leadingMonomial lex
-#eval f₁.leadingMonomial grlex
-#eval f₂.leadingMonomial grlex
+-- #eval f₁.leadingMonomial grlex
+-- #eval f₂.leadingMonomial grlex
 -- #eval f₁.leadingMonomial grevlex
 -- #eval f₂.leadingMonomial grevlex
 end
