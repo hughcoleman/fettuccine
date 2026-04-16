@@ -118,9 +118,9 @@ instance noZeroDivisors : NoZeroDivisors (CMvPolynomial σ R) where
     have hcoeff : (a * b) (in[ord](a) + in[ord](b)) = a in[ord](a) * b in[ord](b) :=
       coeff_mul_leadingMonomial_add (ord := ord) a b ha hb
     have ha_coeff : a in[ord](a) ≠ 0 := by
-      exact (mem_support_iff a in[ord](a)).mp (leadingMonomial_mem_support (ord := ord) a ha)
+      simpa [leadingCoefficient] using CMvPolynomial.leadingCoefficient_ne_zero (ord := ord) a ha
     have hb_coeff : b in[ord](b) ≠ 0 := by
-      exact (mem_support_iff b in[ord](b)).mp (leadingMonomial_mem_support (ord := ord) b hb)
+      simpa [leadingCoefficient] using CMvPolynomial.leadingCoefficient_ne_zero (ord := ord) b hb
     have hzero : a in[ord](a) * b in[ord](b) = 0 := by
       rw [← hcoeff]; simp [h]
     exact (mul_ne_zero ha_coeff hb_coeff) hzero
@@ -132,15 +132,30 @@ local instance : WellFoundedRelation ord.syn where
   rel := (· < ·)
   wf  := ord.wf.wf
 
-/-- If two polynomials have the same leading monomial and leading coefficient, then subtracting
-    one from the other decreases with respect to the lexicographic measure. -/
-lemma terminationMeasure_sub_strict_of_same_leadingData (f h : CMvPolynomial σ R) (hf : f ≠ 0)
+namespace mvDivide
+
+/-- The metric type for `mvDivide`, which consists of the leading monomial paired with the
+    cardinality of its support. -/
+abbrev Metric (ord : CMonomialOrder σ) : Type _ := ord.syn × Nat
+
+/-- The lexicographic relation used by the `mvDivide` termination metric. -/
+abbrev MetricRel (ord : CMonomialOrder σ) : Metric ord → Metric ord → Prop :=
+  Prod.Lex (fun x1 x2 => x1 < x2) (fun a₁ a₂ => a₁ < a₂)
+
+/-- The termination metric for `mvDivide`. -/
+def metric (ord : CMonomialOrder σ) (f : CMvPolynomial σ R) : Metric ord :=
+  (ord.toSyn in[ord](f), f.support.card)
+
+end mvDivide
+
+/-- If two polynomials have the same leading terms, then their difference has a strictly smaller
+    leading term (with respect to the lexicographic measure). -/
+lemma metric_sub_lt_of_same_leadingTerm (f h : CMvPolynomial σ R) (hf : f ≠ 0)
     (hlm : in[ord](h) = in[ord](f))
     (hlc : leadingCoefficient ord h = leadingCoefficient ord f) :
-    Prod.Lex (fun x1 x2 => x1 < x2) (fun a₁ a₂ => a₁ < a₂)
-      (ord.toSyn in[ord](f - h), (f - h).support.card)
-      (ord.toSyn in[ord](f)    ,       f.support.card) := by
+    mvDivide.MetricRel ord (mvDivide.metric ord (f - h)) (mvDivide.metric ord f) := by
   -- [TO-REVIEW]
+  unfold mvDivide.MetricRel mvDivide.metric
   rw [Prod.lex_def]
   have hs : (f - h).support ⊆ f.support ∪ h.support :=
     support_sub_subset (f := f) (g := h)
@@ -186,16 +201,16 @@ lemma terminationMeasure_sub_strict_of_same_leadingData (f h : CMvPolynomial σ 
 /-- Decrease lemma for the `none` branch of `mvDivide`. -/
 lemma mvDivide_decreases_none_branch (f g : CMvPolynomial σ R) (hf : f ≠ 0)
   (_hm : CMonomial.divide in[ord](f) in[ord](g) = none) :
-    Prod.Lex (fun x1 x2 => x1 < x2) (fun a₁ a₂ => a₁ < a₂)
-      (ord.toSyn in[ord](f - leadingTerm ord f), (f - leadingTerm ord f).support.card)
-      (ord.toSyn in[ord](f)                    ,                       f.support.card) := by
+    mvDivide.MetricRel ord
+      (mvDivide.metric ord (f - leadingTerm ord f))
+      (mvDivide.metric ord f) := by
   -- [TO-REVIEW]
-  have hfmem : in[ord](f) ∈ f.support := leadingMonomial_mem_support (ord := ord) f hf
-  have hfcoeff : leadingCoefficient ord f ≠ 0 := (mem_support_iff f in[ord](f)).1 hfmem
+  have hf_coeff : leadingCoefficient ord f ≠ 0 :=
+    CMvPolynomial.leadingCoefficient_ne_zero (ord := ord) f hf
   have hlm : in[ord](leadingTerm ord f) = in[ord](f) := by
     unfold leadingTerm
     simpa [leadingCoefficient] using
-      leadingMonomial_monomial (ord := ord) in[ord](f) (leadingCoefficient ord f) hfcoeff
+      leadingMonomial_monomial (ord := ord) in[ord](f) (leadingCoefficient ord f) hf_coeff
   have hlc : leadingCoefficient ord (leadingTerm ord f) = leadingCoefficient ord f := by
     calc
       leadingCoefficient ord (leadingTerm ord f)
@@ -205,23 +220,23 @@ lemma mvDivide_decreases_none_branch (f g : CMvPolynomial σ R) (hf : f ≠ 0)
             change (CMvPolynomial.ofMonomial in[ord](f) (leadingCoefficient ord f)) in[ord](f)
               = leadingCoefficient ord f
             simp [CMvPolynomial.ofMonomial]
-  exact terminationMeasure_sub_strict_of_same_leadingData
+  exact metric_sub_lt_of_same_leadingTerm
     (ord := ord) f (leadingTerm ord f) hf hlm hlc
 
 /-- Decrease lemma for the `some` branch of `mvDivide`. -/
 lemma mvDivide_decreases_some_branch (f g : CMvPolynomial σ R) (hf : f ≠ 0) (hg : g ≠ 0)
     (m : CMonomial σ) (hm : CMonomial.divide in[ord](f) in[ord](g) = some m) :
     let c := CMvPolynomial.ofMonomial m (leadingCoefficient ord f / leadingCoefficient ord g)
-    Prod.Lex (fun x1 x2 => x1 < x2) (fun a₁ a₂ => a₁ < a₂)
-      (ord.toSyn in[ord](f - c * g), (f - c * g).support.card)
-      (ord.toSyn in[ord](f)        ,           f.support.card) := by
+    mvDivide.MetricRel ord
+      (mvDivide.metric ord (f - c * g))
+      (mvDivide.metric ord f) := by
   -- [TO-REVIEW]
   classical
   dsimp
-  have hfmem : in[ord](f) ∈ f.support := leadingMonomial_mem_support (ord := ord) f hf
-  have hgmem : in[ord](g) ∈ g.support := leadingMonomial_mem_support (ord := ord) g hg
-  have hfcoeff : leadingCoefficient ord f ≠ 0 := (mem_support_iff f in[ord](f)).1 hfmem
-  have hgcoeff : leadingCoefficient ord g ≠ 0 := (mem_support_iff g in[ord](g)).1 hgmem
+  have hf_coeff : leadingCoefficient ord f ≠ 0 :=
+    CMvPolynomial.leadingCoefficient_ne_zero (ord := ord) f hf
+  have hg_coeff : leadingCoefficient ord g ≠ 0 :=
+    CMvPolynomial.leadingCoefficient_ne_zero (ord := ord) g hg
   have hdiv : CMonomial.divides? in[ord](g) in[ord](f) := by
     by_cases h : CMonomial.divides? in[ord](g) in[ord](f)
     · exact h
@@ -237,7 +252,7 @@ lemma mvDivide_decreases_some_branch (f g : CMvPolynomial σ R) (hf : f ≠ 0) (
   let c : CMvPolynomial σ R :=
     CMvPolynomial.ofMonomial m (leadingCoefficient ord f / leadingCoefficient ord g)
   have hcoeffc : leadingCoefficient ord f / leadingCoefficient ord g ≠ 0 :=
-    div_ne_zero hfcoeff hgcoeff
+    div_ne_zero hf_coeff hg_coeff
   have hc0 : c ≠ 0 := by
     intro hc
     have hcm : c m = 0 := by simp [hc]
@@ -273,15 +288,14 @@ lemma mvDivide_decreases_some_branch (f g : CMvPolynomial σ R) (hf : f ≠ 0) (
         rw [hc_eval]
         rfl
       _ = leadingCoefficient ord f := by
-            simpa [leadingCoefficient] using div_mul_cancel₀ (leadingCoefficient ord f) hgcoeff
+            simpa [leadingCoefficient] using div_mul_cancel₀ (leadingCoefficient ord f) hg_coeff
   simpa [c] using
-    terminationMeasure_sub_strict_of_same_leadingData
+    metric_sub_lt_of_same_leadingTerm
       (ord := ord) f (c * g) hf hlm_cg hlc_cg
 
 set_option linter.unusedVariables false in
 /-- The division algorithm for multivariate polynomials. -/
 def mvDivide (f g : CMvPolynomial σ R) (hg : g ≠ 0) : CMvPolynomial σ R × CMvPolynomial σ R :=
-  -- [TO-REVIEW]
   if hf : f = 0 then
     (0, 0)
   else
@@ -296,7 +310,7 @@ def mvDivide (f g : CMvPolynomial σ R) (hg : g ≠ 0) : CMvPolynomial σ R × C
       let lt_f   := leadingTerm ord f
       let ⟨q, r⟩ := mvDivide (f - lt_f) g hg
       (q, r + lt_f)
-termination_by (ord.toSyn in[ord](f), f.support.card)
+termination_by mvDivide.metric ord f
 decreasing_by
   · simpa using mvDivide_decreases_some_branch (ord := ord) f g hf hg m hm
   · simpa using mvDivide_decreases_none_branch (ord := ord) f g hf hm

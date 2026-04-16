@@ -280,6 +280,11 @@ lemma coeff_mul_leadingMonomial_add (f g : CMvPolynomial σ R) (hf : f ≠ 0) (h
 def leadingCoefficient (f : CMvPolynomial σ R) : R :=
   f in[ord](f)
 
+/-- A nonzero polynomial has nonzero leading coefficient. -/
+lemma leadingCoefficient_ne_zero (f : CMvPolynomial σ R) (hf : f ≠ 0) :
+    leadingCoefficient ord f ≠ 0 := by
+  exact (mem_support_iff f in[ord](f)).mp (leadingMonomial_mem_support (ord := ord) f hf)
+
 /-- The **leading term** of a polynomial is the leading monomial alongside its coefficient. -/
 def leadingTerm (f : CMvPolynomial σ R) : CMvPolynomial σ R :=
   CMvPolynomial.ofMonomial in[ord](f) (leadingCoefficient ord f)
@@ -292,14 +297,12 @@ lemma leadingMonomial_mul [NoZeroDivisors R] (f g : CMvPolynomial σ R) (hf : f 
   have hle : ord.toSyn in[ord](f * g) ≤ ord.toSyn in[ord](f) + ord.toSyn in[ord](g) :=
     leadingMonomial_mul_le (ord := ord) f g
   have hmem_top : in[ord](f) + in[ord](g) ∈ (f * g).support := by
-    have hfmem : in[ord](f) ∈ f.support := leadingMonomial_mem_support (ord := ord) f hf
-    have hgmem : in[ord](g) ∈ g.support := leadingMonomial_mem_support (ord := ord) g hg
-    have hfcoeff : leadingCoefficient ord f ≠ 0 := (mem_support_iff f in[ord](f)).1 hfmem
-    have hgcoeff : leadingCoefficient ord g ≠ 0 := (mem_support_iff g in[ord](g)).1 hgmem
+    have hf_coeff : leadingCoefficient ord f ≠ 0 := leadingCoefficient_ne_zero (ord := ord) f hf
+    have hg_coeff : leadingCoefficient ord g ≠ 0 := leadingCoefficient_ne_zero (ord := ord) g hg
     have hcoeff_top := coeff_mul_leadingMonomial_add (ord := ord) f g hf hg
     have hfgcoeff : (f * g) (in[ord](f) + in[ord](g)) ≠ 0 := by
       rw [hcoeff_top]
-      exact mul_ne_zero hfcoeff hgcoeff
+      exact mul_ne_zero hf_coeff hg_coeff
     exact (mem_support_iff (f * g) (in[ord](f) + in[ord](g))).2 hfgcoeff
   have hge : ord.toSyn in[ord](f) + ord.toSyn in[ord](g) ≤ ord.toSyn in[ord](f * g) := by
     have htop : ord.toSyn (in[ord](f) + in[ord](g)) ≤ ord.toSyn in[ord](f * g) :=
