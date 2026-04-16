@@ -7,10 +7,15 @@ import Mathlib.Data.DFinsupp.Lex
 
 This file provides an implementation of the graded reverse lexicographic order on monomials.
 
+For now, the monomial order is only given on polynomial rings in finitely many variables, since this
+greatly simplifies the implementation of the proof. In the future, it would be nice to expand this
+to the infinite case as well.
+
 ## Definitions
 
 * `Grevlex ι` : a type synonym used to equip a type with the graded reverse lexicographic order.
-* `CMonomialOrder.grevlex` : the graded reverse lexicographic monomial order on `CMonomial σ`.
+* `CMonomialOrder.grevlex` : the graded reverse lexicographic monomial order on `CMonomial σ` for
+  `[Finite σ]`.
 
 ## Theorems
 
