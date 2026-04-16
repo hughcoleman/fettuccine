@@ -103,15 +103,24 @@ def z : CMvPolynomial σ Int := X 2
 def f₁ := 3*x^2 + 2*y^3 + 3*z + 1
 def f₂ : CMvPolynomial σ Int := 0
 
-section
 #eval f₁.leadingMonomial lex
 #eval f₂.leadingMonomial lex
--- DO NOT UNCOMMENT; these segfault Lean.
--- #eval f₁.leadingMonomial grlex
--- #eval f₂.leadingMonomial grlex
--- #eval f₁.leadingMonomial grevlex
--- #eval f₂.leadingMonomial grevlex
-end
+
+-- On current Lean toolchains, `#eval` of leading monomials under grlex/grevlex can segfault.
+-- #eval f₁.leadingMonomialBySort grlex
+-- #eval f₂.leadingMonomialBySort grlex
+-- #eval f₁.leadingMonomialBySort grevlex
+-- #eval f₂.leadingMonomialBySort grevlex
+
+example : f₁.leadingMonomial grlex = (3 • CMonomial.X (σ := σ) 1) := by
+  decide
+example : f₂.leadingMonomial grlex = 0 := by
+  decide
+
+example : f₁.leadingMonomial grevlex = (3 • CMonomial.X (σ := σ) 1) := by
+  decide
+example : f₂.leadingMonomial grevlex = 0 := by
+  decide
 
 end LeadingMonomial
 
