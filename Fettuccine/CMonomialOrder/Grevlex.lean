@@ -6,23 +6,48 @@ import Mathlib.Data.DFinsupp.WellFounded
 # The Graded Reverse Lexicographic Order on Monomials
 
 This file provides an implementation of the graded reverse lexicographic order on monomials.
-It compares first by total degree, then by colex on variables viewed in `OrderDual`.
+
+For the time being, this ordering is only available for polynomial rings in finitely many variables,
+in order to simplify the implementations of the proofs.
+
+## Definitions
+
+* `Grevlex ι` : a type synonym used to equip a type with the graded reverse lexicographic order.
+* `CMonomialOrder.grevlex` : the graded reverse lexicographic monomial order on `CMonomial σ`.
+
+## Theorems
+
+* `CMonomialOrder.grevlex.IsGraded` : the graded reverse lexicographic order is graded.
 -/
 
+/-- A type synonym to equip a type with its graded reverse lexicographic order. -/
 def Grevlex (ι : Type*) := ι
 
 variable {ι : Type*}
 
+/-- `toGrevlex` is the identity function to the `Grevlex` of a type. -/
 @[match_pattern] def toGrevlex : ι ≃ Grevlex ι := Equiv.refl _
+
+/-- `ofGrevlex` is the identity function from the `Grevlex` of a type. -/
 @[match_pattern] def ofGrevlex : Grevlex ι ≃ ι := Equiv.refl _
 
+theorem toGrevlex_injective : Function.Injective (toGrevlex (ι := ι)) :=
+  fun _ _ h => h
+
+theorem toGrevlex_inj {a b : ι} : toGrevlex a = toGrevlex b ↔ a = b := Iff.rfl
+
 @[simp] theorem ofGrevlex_symm_eq : (@ofGrevlex ι).symm = toGrevlex := rfl
+
 @[simp] theorem toGrevlex_symm_eq : (@toGrevlex ι).symm = ofGrevlex := rfl
+
 @[simp] theorem ofGrevlex_toGrevlex (a : ι) : ofGrevlex (toGrevlex a) = a := rfl
+
 @[simp] theorem toGrevlex_ofGrevlex (a : Grevlex ι) : toGrevlex (ofGrevlex a) = a := rfl
 
 theorem ofGrevlex_injective : Function.Injective (ofGrevlex (ι := ι)) :=
   fun _ _ h => h
+
+theorem ofGrevlex_inj {a b : Grevlex ι} : ofGrevlex a = ofGrevlex b ↔ a = b := Iff.rfl
 
 instance [AddCommMonoid ι] : AddCommMonoid (Grevlex ι) :=
   ofGrevlex.addCommMonoid
@@ -58,8 +83,7 @@ def toDualMonomial : (Π₀ _ : ι, ℕ) → (Π₀ _ : ιᵒᵈ, ℕ) :=
       (x := n))
 
 theorem toDualMonomial_monotone : Monotone (toDualMonomial (ι := ι)) := by
-  intro a b h
-  intro i
+  intro a b h i
   simpa [toDualMonomial] using h (OrderDual.ofDual i)
 
 theorem toDualMonomial_injective : Function.Injective (toDualMonomial (ι := ι)) := by
@@ -69,6 +93,7 @@ theorem toDualMonomial_injective : Function.Injective (toDualMonomial (ι := ι)
 
 namespace Grevlex
 
+-- Degree-first, then colex on dual-indexed variables.
 instance [LT ι] : LT (Grevlex (Π₀ _ : ι, ℕ)) :=
   ⟨fun f g =>
     (toLex
@@ -169,6 +194,48 @@ instance wellFoundedLT [Finite ι] : WellFoundedLT (Grevlex (Π₀ _ : ι, ℕ))
           toColex (toDualMonomial (ofGrevlex f))))) ?_⟩
   exact (wellFounded_lt : WellFounded ((· < ·) : ℕ ×ₗ Colex (Π₀ _ : ιᵒᵈ, ℕ) → _))
 
+set_option backward.isDefEq.respectTransparency false in
+theorem single_strictAnti : StrictAnti (fun (a : ι) ↦
+    toGrevlex (DFinsupp.single (β := fun _ : ι => ℕ) a 1)) := by
+  intro a b h
+  rw [DFinsupp.Grevlex.lt_iff]
+  refine Or.inr ⟨?_, ?_⟩
+  · simp [CMonomial.degree, DFinsupp.support_single_ne_zero]
+  · rw [DFinsupp.Colex.lt_iff]
+    refine ⟨OrderDual.toDual a, ?_, ?_⟩
+    · intro j hj
+      have hja : j ≠ OrderDual.toDual a := by
+        intro hja'
+        subst hja'
+        exact lt_irrefl _ hj
+      have hba : (OrderDual.toDual b : ιᵒᵈ) < OrderDual.toDual a :=
+        by
+          change a < b
+          exact h
+      have hbj : (OrderDual.toDual b : ιᵒᵈ) < j := lt_trans hba hj
+      have hjb : j ≠ OrderDual.toDual b := by
+        intro hjb'
+        exact (lt_irrefl _) (hjb' ▸ hbj)
+      simp [toDualMonomial_single, DFinsupp.single_eq_of_ne hja, DFinsupp.single_eq_of_ne hjb]
+    · have hne : (OrderDual.toDual b : ιᵒᵈ) ≠ OrderDual.toDual a :=
+        ne_of_lt (by
+          change a < b
+          exact h)
+      simp [toDualMonomial_single, hne]
+
+theorem single_antitone : Antitone (fun (a : ι) ↦ toGrevlex (DFinsupp.single a 1)) :=
+  single_strictAnti.antitone
+
+theorem single_lt_iff {a b : ι} :
+    toGrevlex (DFinsupp.single (β := fun _ : ι => ℕ) b 1) <
+      toGrevlex (DFinsupp.single (β := fun _ : ι => ℕ) a 1) ↔ a < b :=
+  single_strictAnti.lt_iff_gt
+
+theorem single_le_iff {a b : ι} :
+    toGrevlex (DFinsupp.single (β := fun _ : ι => ℕ) b 1) ≤
+      toGrevlex (DFinsupp.single (β := fun _ : ι => ℕ) a 1) ↔ a ≤ b :=
+  single_strictAnti.le_iff_ge
+
 end Grevlex
 
 end DFinsupp
@@ -178,6 +245,7 @@ namespace CMonomialOrder
 variable {σ : Type*} [DecidableEq σ] [LinearOrder σ] [Finite σ]
 
 set_option backward.isDefEq.respectTransparency false in
+/-- The graded reverse lexicographic order on monomials. -/
 def grevlex : CMonomialOrder σ where
   syn := Grevlex (Π₀ _ : σ, ℕ)
   acm := by
@@ -204,5 +272,36 @@ def grevlex : CMonomialOrder σ where
       simp [CMonomial.degree_add]
     · exact DFinsupp.toColex_monotone (DFinsupp.toDualMonomial_monotone h)
   wf := by infer_instance
+
+theorem grevlex_le_iff {a b : CMonomial σ} :
+    a ≼[grevlex] b ↔ toGrevlex a ≤ toGrevlex b := by
+  rfl
+
+theorem grevlex_lt_iff {a b : CMonomial σ} :
+    a ≺[grevlex] b ↔ toGrevlex a < toGrevlex b := by
+  rfl
+
+theorem grevlex_single_le_iff {a b : σ} :
+    DFinsupp.single (β := fun _ : σ => ℕ) a 1 ≼[grevlex]
+      DFinsupp.single (β := fun _ : σ => ℕ) b 1 ↔ b ≤ a := by
+  rw [grevlex_le_iff, DFinsupp.Grevlex.single_le_iff]
+
+theorem grevlex_single_lt_iff {a b : σ} :
+    DFinsupp.single (β := fun _ : σ => ℕ) a 1 ≺[grevlex]
+      DFinsupp.single (β := fun _ : σ => ℕ) b 1 ↔ b < a := by
+  rw [grevlex_lt_iff, DFinsupp.Grevlex.single_lt_iff]
+
+theorem grevlex.IsGraded : (grevlex (σ := σ)).IsGraded := by
+  intro m₁ m₂ hdeg
+  change
+    (toLex
+      (CMonomial.degree (σ := σ) m₁,
+        toColex (DFinsupp.toDualMonomial (ι := σ) m₁)) :
+      ℕ ×ₗ Colex (Π₀ _ : σᵒᵈ, ℕ)) <
+    (toLex
+      (CMonomial.degree (σ := σ) m₂,
+        toColex (DFinsupp.toDualMonomial (ι := σ) m₂)) :
+      ℕ ×ₗ Colex (Π₀ _ : σᵒᵈ, ℕ))
+  exact Prod.Lex.toLex_lt_toLex.mpr (Or.inl hdeg)
 
 end CMonomialOrder
