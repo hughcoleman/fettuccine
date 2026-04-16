@@ -106,7 +106,7 @@ def f₂ : CMvPolynomial σ Int := 0
 #eval f₁.leadingMonomial lex
 #eval f₂.leadingMonomial lex
 
--- On current Lean toolchains, `#eval` of leading monomials under grlex/grevlex can segfault.
+-- On current Lean toolchains, `#eval` of leading monomials under grlex/grevlex usually segfaults.
 -- #eval f₁.leadingMonomial grlex
 -- #eval f₂.leadingMonomial grlex
 -- #eval f₁.leadingMonomial grevlex
