@@ -105,6 +105,7 @@ set_option linter.unusedDecidableInType false in
 -- order. It would be nice to eliminate this somehow?
 instance noZeroDivisors : NoZeroDivisors (CMvPolynomial σ R) where
   eq_zero_or_eq_zero_of_mul_eq_zero := by
+    -- [TO-REVIEW]
     intro a b h
     -- We can assume a ≠ 0 and b ≠ 0, because otherwise the conclusion is trivial.
     by_cases ha : a = 0
@@ -115,15 +116,16 @@ instance noZeroDivisors : NoZeroDivisors (CMvPolynomial σ R) where
     -- the product of the leading terms of `a` and `b`, and so we can pass to the fact that `R` is
     -- a domain.
     exfalso
-    have hcoeff : (a * b) (in[ord](a) + in[ord](b)) = a in[ord](a) * b in[ord](b) :=
-      coeff_mul_leadingMonomial_add (ord := ord) a b ha hb
-    have ha_coeff : a in[ord](a) ≠ 0 := by
-      simpa [leadingCoefficient] using CMvPolynomial.leadingCoefficient_ne_zero (ord := ord) a ha
-    have hb_coeff : b in[ord](b) ≠ 0 := by
-      simpa [leadingCoefficient] using CMvPolynomial.leadingCoefficient_ne_zero (ord := ord) b hb
-    have hzero : a in[ord](a) * b in[ord](b) = 0 := by
-      rw [← hcoeff]; simp [h]
-    exact (mul_ne_zero ha_coeff hb_coeff) hzero
+    have hcoeff_lc :
+        (a * b).coefficientOf (in[ord](a) + in[ord](b)) =
+          leadingCoefficient ord a * leadingCoefficient ord b := by
+      simpa using leadingCoefficient_mul (ord := ord) a b ha hb
+    have hzero : leadingCoefficient ord a * leadingCoefficient ord b = 0 := by
+      rw [← hcoeff_lc]
+      simp [h]
+    exact (mul_ne_zero
+      (CMvPolynomial.leadingCoefficient_ne_zero ord a ha)
+      (CMvPolynomial.leadingCoefficient_ne_zero ord b hb)) hzero
 
 -- Instantiate instances of `LinearOrder` and `WellFoundedRelation` on `ord.syn` so that the
 -- termination measure for `mvDivide` is interpreted correctly.
@@ -170,12 +172,15 @@ lemma metric_sub_lt_of_same_leadingTerm (f h : CMvPolynomial σ R) (hf : f ≠ 0
       · exact le_trans
           (le_leadingMonomial (ord := ord) h in[ord](f - h) hmem_h)
           (by simp [hlm])
-  have hcancel : (f - h) in[ord](f) = 0 := by
+  have hcancel : (f - h).coefficientOf in[ord](f) = 0 := by
     calc
-      (f - h) in[ord](f) = f in[ord](f) - h in[ord](f) := by simp
+      (f - h).coefficientOf in[ord](f)
+          = f.coefficientOf in[ord](f) - h.coefficientOf in[ord](f) := by
+            simp [CMvPolynomial.coefficientOf]
       _ = leadingCoefficient ord f - leadingCoefficient ord h := by
-            simp [leadingCoefficient, hlm]
-      _ = 0 := by simp [hlc]
+            simp [CMvPolynomial.leadingCoefficient, CMvPolynomial.coefficientOf, hlm]
+      _ = 0 := by
+            exact sub_eq_zero.mpr hlc.symm
   by_cases heq : ord.toSyn in[ord](f - h) = ord.toSyn in[ord](f)
   · right
     refine ⟨heq, ?_⟩
@@ -185,8 +190,9 @@ lemma metric_sub_lt_of_same_leadingTerm (f h : CMvPolynomial σ R) (hf : f ≠ 0
         leadingMonomial_mem_support (ord := ord) (f - h) hsub0
       have hneq_lm : in[ord](f - h) ≠ in[ord](f) := by
         intro hEq
-        have hcoeff_nz : (f - h) in[ord](f) ≠ 0 := by
-          simpa [hEq] using (mem_support_iff (f - h) in[ord](f - h)).1 hmem_sub
+        have hcoeff_nz : (f - h).coefficientOf in[ord](f) ≠ 0 := by
+          simpa [CMvPolynomial.coefficientOf, hEq] using
+            (mem_support_iff (f - h) in[ord](f - h)).1 hmem_sub
         exact hcoeff_nz hcancel
       have hneq_syn : ord.toSyn in[ord](f - h) ≠ ord.toSyn in[ord](f) := by
         intro hsyn
@@ -214,12 +220,13 @@ lemma mvDivide_decreases_none_branch (f g : CMvPolynomial σ R) (hf : f ≠ 0)
   have hlc : leadingCoefficient ord (leadingTerm ord f) = leadingCoefficient ord f := by
     calc
       leadingCoefficient ord (leadingTerm ord f)
-          = (leadingTerm ord f) in[ord](leadingTerm ord f) := rfl
-      _ = (leadingTerm ord f) in[ord](f) := by simp [hlm]
+          = (leadingTerm ord f).coefficientOf in[ord](leadingTerm ord f) := rfl
+      _ = (leadingTerm ord f).coefficientOf in[ord](f) := by rw [hlm]
       _ = leadingCoefficient ord f := by
-            change (CMvPolynomial.ofMonomial in[ord](f) (leadingCoefficient ord f)) in[ord](f)
-              = leadingCoefficient ord f
-            simp [CMvPolynomial.ofMonomial]
+            change (CMvPolynomial.ofMonomial in[ord](f)
+              (leadingCoefficient ord f)).coefficientOf in[ord](f) = leadingCoefficient ord f
+            simp [CMvPolynomial.ofMonomial, CMvPolynomial.leadingCoefficient,
+              CMvPolynomial.coefficientOf]
   exact metric_sub_lt_of_same_leadingTerm
     (ord := ord) f (leadingTerm ord f) hf hlm hlc
 
@@ -255,9 +262,11 @@ lemma mvDivide_decreases_some_branch (f g : CMvPolynomial σ R) (hf : f ≠ 0) (
     div_ne_zero hf_coeff hg_coeff
   have hc0 : c ≠ 0 := by
     intro hc
-    have hcm : c m = 0 := by simp [hc]
-    have hcm' : c m = leadingCoefficient ord f / leadingCoefficient ord g := by
-      change (CMvPolynomial.ofMonomial m (leadingCoefficient ord f / leadingCoefficient ord g)) m =
+    have hcm : c.coefficientOf m = 0 := by
+      simp [CMvPolynomial.coefficientOf, hc]
+    have hcm' : c.coefficientOf m = leadingCoefficient ord f / leadingCoefficient ord g := by
+      change CMvPolynomial.coefficientOf
+          (CMvPolynomial.ofMonomial m (leadingCoefficient ord f / leadingCoefficient ord g)) m =
         leadingCoefficient ord f / leadingCoefficient ord g
       simp [CMvPolynomial.ofMonomial]
     exact hcoeffc (hcm' ▸ hcm)
@@ -272,18 +281,24 @@ lemma mvDivide_decreases_some_branch (f g : CMvPolynomial σ R) (hf : f ≠ 0) (
       _ = m + in[ord](g) := by simp [hlm_c]
       _ = in[ord](f) := hmadd
   have hlc_cg : leadingCoefficient ord (c * g) = leadingCoefficient ord f := by
-    have hcoeff_top := coeff_mul_leadingMonomial_add (ord := ord) c g hc0 hg
-    have hc_eval : c in[ord](c) = leadingCoefficient ord f / leadingCoefficient ord g := by
+    have hcoeff_top :
+        (c * g).coefficientOf (in[ord](c) + in[ord](g)) =
+          c.coefficientOf in[ord](c) * g.coefficientOf in[ord](g) := by
+      simpa [CMvPolynomial.leadingCoefficient] using
+        leadingCoefficient_mul (ord := ord) c g hc0 hg
+    have hc_eval :
+      c.coefficientOf in[ord](c) = leadingCoefficient ord f / leadingCoefficient ord g := by
       rw [hlm_c]
-      change (CMvPolynomial.ofMonomial m (leadingCoefficient ord f / leadingCoefficient ord g)) m =
+      change CMvPolynomial.coefficientOf
+          (CMvPolynomial.ofMonomial m (leadingCoefficient ord f / leadingCoefficient ord g)) m =
         leadingCoefficient ord f / leadingCoefficient ord g
       simp [CMvPolynomial.ofMonomial]
     calc
       leadingCoefficient ord (c * g)
-          = (c * g) in[ord](c * g) := rfl
-      _ = (c * g) (in[ord](c) + in[ord](g)) := by
-            simp [leadingMonomial_mul (ord := ord) c g hc0 hg]
-      _ = c in[ord](c) * g in[ord](g) := hcoeff_top
+          = (c * g).coefficientOf in[ord](c * g) := rfl
+      _ = (c * g).coefficientOf (in[ord](c) + in[ord](g)) := by
+            simp [CMvPolynomial.coefficientOf, leadingMonomial_mul (ord := ord) c g hc0 hg]
+      _ = c.coefficientOf in[ord](c) * g.coefficientOf in[ord](g) := hcoeff_top
       _ = (leadingCoefficient ord f / leadingCoefficient ord g) * leadingCoefficient ord g := by
         rw [hc_eval]
         rfl
@@ -326,9 +341,13 @@ lemma mvDivide_step_some (f g : CMvPolynomial σ R) (hg : g ≠ 0) (hf : f ≠ 0
   subst hc
   by_cases h0 : f = 0
   · exact (hf h0).elim
+  have hqr' :
+      mvDivide ord
+        (f - CMvPolynomial.ofMonomial m (f in[ord](f) / g in[ord](g)) * g) g hg = (q, r) := by
+    simpa [CMvPolynomial.leadingCoefficient, CMvPolynomial.coefficientOf] using hqr
   · rw [mvDivide.eq_def]
     rw [hm]
-    simp [h0, hqr]
+    simp [h0, hqr']
 
 /-- One-step unfolding of `mvDivide` in the `none` branch. -/
 lemma mvDivide_step_none (f g : CMvPolynomial σ R) (hg : g ≠ 0) (hf : f ≠ 0)
@@ -340,9 +359,13 @@ lemma mvDivide_step_none (f g : CMvPolynomial σ R) (hg : g ≠ 0) (hf : f ≠ 0
   subst hltf
   by_cases h0 : f = 0
   · exact (hf h0).elim
+  have hqr' :
+      mvDivide ord (f - CMvPolynomial.ofMonomial in[ord](f) (f in[ord](f))) g hg = (q, r) := by
+    simpa [CMvPolynomial.leadingTerm, CMvPolynomial.leadingCoefficient,
+      CMvPolynomial.coefficientOf] using hqr
   · rw [mvDivide.eq_def]
     rw [hm]
-    simp [h0, hqr]
+    simp [h0, hqr']
 
 /-- The quotient and remainder of multivariate polynomial division is uniquely determined. -/
 theorem mvDivide.unique {f g q₁ q₂ r₁ r₂ : CMvPolynomial σ R} (hg : g ≠ 0)
