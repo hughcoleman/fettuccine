@@ -63,7 +63,7 @@ open scoped CMonomialOrder
 example : (y ≺[lex] x) := by
   decide
 
-example : (x ≺[grevlex] y) := by
+example : (y ≺[grevlex] x) := by
   decide
 
 example : (x ≺[lex] x2) ∧ (xy ≺[lex] x2) ∧ (yz ≺[lex] xy)
@@ -76,7 +76,7 @@ example : (x2 ≼[lex] x2) ∧ (yz ≼[lex] x2) := by
 example : ¬(x2 ≺[lex] y3) := by
   decide
 
-example : (xy ≺[lex] x2) ∧ (xy ≺[grlex] x2) ∧ (x2 ≺[grevlex] xy) := by
+example : (xy ≺[lex] x2) ∧ (xy ≺[grlex] x2) ∧ (xy ≺[grevlex] x2) := by
   decide
 
 example : (x ≺[grlex] y3) ∧ (x ≺[grevlex] y3) := by
