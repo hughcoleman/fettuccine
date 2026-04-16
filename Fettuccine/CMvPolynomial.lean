@@ -162,21 +162,22 @@ lemma support_mul_subset (f g : CMvPolynomial σ R) :
   -- induction on the size of the finite set.)
   have support :
       (f * g).support ⊆ (f.support ×ˢ g.support).biUnion (fun ij => (termOf ij).support) := by
-    have h' (s : Finset (CMonomial σ × CMonomial σ)) :
-        (∑ ij ∈ s, termOf ij).support ⊆ s.biUnion (fun ij => (termOf ij).support) := by
-      refine Finset.induction_on s ?_ ?_
-      · simp [DirectSum.support_zero]
-      · intro a s ha hs
-        have h₁ :
-            (termOf a + ∑ ij ∈ s, termOf ij).support
-              ⊆ (termOf a).support ∪ (∑ ij ∈ s, termOf ij).support := by
-          simpa using (DFinsupp.support_add (g₁ := termOf a) (g₂ := ∑ ij ∈ s, termOf ij))
-        have h₂ :
-            (termOf a).support ∪ (∑ ij ∈ s, termOf ij).support
-              ⊆ (termOf a).support ∪ s.biUnion (fun ij => (termOf ij).support) := by
-          exact Finset.union_subset_union (subset_refl _) hs
-        simpa [Finset.sum_insert, ha, Finset.biUnion_insert] using (h₁.trans h₂)
-    simpa [mul_eq] using h' (f.support ×ˢ g.support)
+    suffices h' : ∀ s : Finset (CMonomial σ × CMonomial σ),
+        (∑ ij ∈ s, termOf ij).support ⊆ s.biUnion (fun ij => (termOf ij).support) by
+      simpa [mul_eq] using h' (f.support ×ˢ g.support)
+    intro s
+    refine Finset.induction_on s ?_ ?_
+    · simp [DirectSum.support_zero]
+    · intro a s ha hs
+      have h₁ :
+          (termOf a + ∑ ij ∈ s, termOf ij).support
+            ⊆ (termOf a).support ∪ (∑ ij ∈ s, termOf ij).support := by
+        simpa using (DFinsupp.support_add (g₁ := termOf a) (g₂ := ∑ ij ∈ s, termOf ij))
+      have h₂ :
+          (termOf a).support ∪ (∑ ij ∈ s, termOf ij).support
+            ⊆ (termOf a).support ∪ s.biUnion (fun ij => (termOf ij).support) :=
+        Finset.union_subset_union (subset_refl _) hs
+      simpa [Finset.sum_insert, ha, Finset.biUnion_insert] using (h₁.trans h₂)
   -- Pass to the remaining containment.
   refine support.trans ?_
   refine (Finset.biUnion_subset).mpr ?_
