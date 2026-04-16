@@ -1,4 +1,6 @@
 import Fettuccine.CMonomialOrder
+import Fettuccine.CMonomialOrder.Grlex
+import Fettuccine.CMonomialOrder.Grevlex
 import Fettuccine.CMvPolynomial
 import Fettuccine.Repr
 
@@ -68,9 +70,15 @@ example : (x2 ≼[lex] x2) ∧ (yz ≼[lex] x2) := by
 example : ¬(x2 ≺[lex] y3) := by
   decide
 
--- example : (x2 ≺[grlex] y3) := by
---   apply grlex_isGraded -- not technically necessary... `decide` can do it too.
---   decide
+example : (xy ≺[lex] x2) ∧ (xy ≺[grlex] x2) ∧ (x2 ≺[grevlex] xy) := by
+  decide
+
+example : (x ≺[grlex] y3) ∧ (x ≺[grevlex] y3) := by
+  decide
+
+example : (x2 ≺[grlex] y3) := by
+  apply grlex.IsGraded -- not technically necessary... `decide` can do it too.
+  decide
 
 -- Can also obtain lex on `ℕ` with the dual order.
 example : CMonomialOrder ℕᵒᵈ := lex
@@ -91,11 +99,10 @@ def f₂ : CMvPolynomial σ Int := 0
 section
 #eval f₁.leadingMonomial lex
 #eval f₂.leadingMonomial lex
-end
-
-section
--- #eval f₁.leadingMonomial grlex
--- #eval f₂.leadingMonomial grlex
+#eval f₁.leadingMonomial grlex
+#eval f₂.leadingMonomial grlex
+-- #eval f₁.leadingMonomial grevlex
+-- #eval f₂.leadingMonomial grevlex
 end
 
 end LeadingMonomial
