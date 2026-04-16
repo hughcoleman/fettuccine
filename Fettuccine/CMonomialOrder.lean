@@ -61,7 +61,7 @@ variable {σ : Type*} [DecidableEq σ] (ord : CMonomialOrder σ)
 
 /-- Zero is a minimal element of any monomial order. -/
 lemma zero_le' (m : ord.syn) : 0 ≤ m := by
-  by_contra h; push_neg at h
+  by_contra h; push Not at h
   -- If 0 > m, then by translation-invariance we can construct the infinitely-descending sequence
   -- 0 > m > m² > m³ > ⋯.
   have h' (n : ℕ) : (n + 1) • m < n • m := by

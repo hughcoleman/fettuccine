@@ -66,6 +66,7 @@ variable [DecidableEq ι]
 def toDualMonomial : (Π₀ _ : ι, ℕ) → (Π₀ _ : ιᵒᵈ, ℕ) :=
   DFinsupp.comapDomain' OrderDual.ofDual OrderDual.toDual_ofDual
 
+omit [DecidableEq ι] in
 @[simp] theorem toDualMonomial_add (a b : Π₀ _ : ι, ℕ) :
     toDualMonomial (a + b) = toDualMonomial a + toDualMonomial b := by
   ext i
@@ -86,6 +87,7 @@ theorem toDualMonomial_monotone : Monotone (toDualMonomial (ι := ι)) := by
   intro a b h i
   simpa [toDualMonomial] using h (OrderDual.ofDual i)
 
+omit [DecidableEq ι] in
 theorem toDualMonomial_injective : Function.Injective (toDualMonomial (ι := ι)) := by
   intro a b hab
   ext i
