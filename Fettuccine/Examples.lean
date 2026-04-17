@@ -1,12 +1,8 @@
-import Fettuccine.CMonomialOrder
-import Fettuccine.CMonomialOrder.Grlex
-import Fettuccine.CMonomialOrder.Grevlex
-import Fettuccine.CMvPolynomial
-import Fettuccine.Buchberger
+import Fettuccine.MonomialOrder
+import Fettuccine.MonomialOrder.Grlex
+import Fettuccine.MonomialOrder.Grevlex
+import Fettuccine.MvPolynomial
 import Fettuccine.Repr
-import Fettuccine.Tactic
-
-namespace Examples
 
 abbrev σ := Fin 3
 
@@ -18,21 +14,19 @@ instance : Repr σ where
 
 namespace MvPolynomial
 
-open CMvPolynomial
+open MvPolynomial
 
-instance : CMonomialOrder σ := CMonomialOrder.lex
-
-def x : CMvPolynomial σ Int := X 0
-def y : CMvPolynomial σ Int := X 1
-def z : CMvPolynomial σ Int := X 2
+def x : MvPolynomial σ Int := X 0
+def y : MvPolynomial σ Int := X 1
+def z : MvPolynomial σ Int := X 2
 def f₁ := 3*x^2 + 2*y^3 + 3*z + 1
 def f₂ := 2*x^2 + 1*y^3 + 4*z
 def f₃ := x^2*y^3 + 2*x*y^2 + 3*z^2 + 1
 
 -- Render polynomials using an explicit monomial order.
-#eval f₁.withOrdering CMonomialOrder.lex
-#eval (f₁ + f₂).withOrdering CMonomialOrder.grlex
-#eval (0 : CMvPolynomial σ Int).withOrdering CMonomialOrder.lex
+#eval f₁.withOrdering MonomialOrder.lex
+#eval (f₁ + f₂).withOrdering MonomialOrder.grlex
+#eval (0 : MvPolynomial σ Int).withOrdering MonomialOrder.lex
 
 -- We can also compute with polynomials.
 example : 3*x^2 ≠ 0 ∧ 2*y^3 ≠ 0 ∧ 3*z + 1 ≠ 0 ∧ 1 ≠ 0 := by
@@ -42,11 +36,11 @@ end MvPolynomial
 
 namespace MonomialOrder
 
-open CMonomial
+open Monomial
 
-def x : CMonomial σ := X 0
-def y : CMonomial σ := X 1
-def z : CMonomial σ := X 2
+def x : Monomial σ := X 0
+def y : Monomial σ := X 1
+def z : Monomial σ := X 2
 
 -- To be compatible with the underlying implementation, monomials are written
 -- additively despite convention.
@@ -60,8 +54,8 @@ example : xy + x = y + x2 := by
   decide
 
 -- Let's bring in special syntax for monomial orders.
-open CMonomialOrder
-open scoped CMonomialOrder
+open MonomialOrder
+open scoped MonomialOrder
 
 example : (y ≺[lex] x) := by
   decide
@@ -90,20 +84,20 @@ example : (x2 ≺[grlex] y3) := by
   decide
 
 -- Can also obtain lex on `ℕ` with the dual order.
-example : CMonomialOrder ℕᵒᵈ := lex
+example : MonomialOrder ℕᵒᵈ := lex
 
 end MonomialOrder
 
 namespace LeadingMonomial
 
-open CMonomialOrder CMvPolynomial
+open MonomialOrder MvPolynomial
 
-def x : CMvPolynomial σ Int := X 0
-def y : CMvPolynomial σ Int := X 1
-def z : CMvPolynomial σ Int := X 2
+def x : MvPolynomial σ Int := MvPolynomial.X 0
+def y : MvPolynomial σ Int := MvPolynomial.X 1
+def z : MvPolynomial σ Int := MvPolynomial.X 2
 
 def f₁ := 3*x^2 + 2*y^3 + 3*z + 1
-def f₂ : CMvPolynomial σ Int := 0
+def f₂ : MvPolynomial σ Int := 0
 
 #eval f₁.leadingMonomial lex
 #eval f₂.leadingMonomial lex
@@ -126,46 +120,14 @@ def m_grevlex := f₁.leadingMonomial grevlex
 #reduce m_grevlex 1
 #reduce m_grevlex 2
 
-example : f₁.leadingMonomial grlex = (3 • CMonomial.X (σ := σ) 1) := by
+example : f₁.leadingMonomial grlex = (3 • Monomial.X (σ := σ) 1) := by
   decide
 example : f₂.leadingMonomial grlex = 0 := by
   decide
 
-example : f₁.leadingMonomial grevlex = (3 • CMonomial.X (σ := σ) 1) := by
+example : f₁.leadingMonomial grevlex = (3 • Monomial.X (σ := σ) 1) := by
   decide
 example : f₂.leadingMonomial grevlex = 0 := by
   decide
 
 end LeadingMonomial
-
-namespace Buchberger
-
-open CMonomialOrder CMvPolynomial
-
-def x : CMvPolynomial σ Rat := X 0
-def y : CMvPolynomial σ Rat := X 1
-def z : CMvPolynomial σ Rat := X 2
-
-def I : Ideal (CMvPolynomial σ Rat) :=
-  Ideal.span ({x * y - 1, x^2 - y} : Set (CMvPolynomial σ Rat))
-
-def I' : Ideal (CMvPolynomial σ Rat) :=
-  Ideal.span ({x*y - z, x*z - y, y*z - x} : Set (CMvPolynomial σ Rat))
-
-set_option linter.unusedTactic false in
-example : True := by
-  haveI : WellFoundedGT σ := inferInstance
-  groebnerBasis I' (CMonomialOrder.lex (σ := σ))
-  trivial
-
-def gens : List (CMvPolynomial σ Rat) := [x * y - 1, x^2 - y]
-def gens' : List (CMvPolynomial σ Rat) := [x * y - z, x * z - y, y * z - x]
-
-#eval (CMvPolynomial.buchbergerAlgorithm (ord := CMonomialOrder.lex) gens 32)
-  |>.map (fun f => f.withOrdering CMonomialOrder.lex)
-#eval (CMvPolynomial.buchbergerAlgorithm (ord := CMonomialOrder.lex) gens' 32)
-  |>.map (fun f => f.withOrdering CMonomialOrder.lex)
-
-end Buchberger
-
-end Examples
