@@ -216,7 +216,7 @@ private lemma metric_sub_lt_of_same_leadingTerm (f h : CMvPolynomial σ R) (hf :
     exact lt_of_le_of_ne hle heq
 
 /-- Decrease lemma for the `none` branch of `mvDivide`. -/
-private lemma mvDivide_decreases_none_branch (f g : CMvPolynomial σ R) (hf : f ≠ 0)
+lemma mvDivide_decreases_none_branch (f g : CMvPolynomial σ R) (hf : f ≠ 0)
   (_hm : CMonomial.divide in[ord](f) in[ord](g) = none) :
     mvDivide.MetricRel ord
       (mvDivide.metric ord (f - leadingTerm ord f))
@@ -242,7 +242,7 @@ private lemma mvDivide_decreases_none_branch (f g : CMvPolynomial σ R) (hf : f 
     ord f (leadingTerm ord f) hf hlm hlc
 
 /-- Decrease lemma for the `some` branch of `mvDivide`. -/
-private lemma mvDivide_decreases_some_branch (f g : CMvPolynomial σ R) (hf : f ≠ 0) (hg : g ≠ 0)
+lemma mvDivide_decreases_some_branch (f g : CMvPolynomial σ R) (hf : f ≠ 0) (hg : g ≠ 0)
     (m : CMonomial σ) (hm : CMonomial.divide in[ord](f) in[ord](g) = some m) :
     let c := CMvPolynomial.ofMonomial m (leadingCoefficient ord f / leadingCoefficient ord g)
     mvDivide.MetricRel ord
@@ -463,5 +463,60 @@ theorem mvDivide.unique {f g q₁ q₂ r₁ r₂ : CMvPolynomial σ R} (hg : g �
   rcases Finset.mem_union.mp hmem with hr₁ | hr₂
   · exact (h₁.2 _ hr₁) hdiv
   · exact (h₂.2 _ hr₂) hdiv
+
+/-- Division relation for dividing `f` by a list `gs`, producing a list of quotients `qs` and a
+  final remainder `r`, by iterating single-divisor division from left to right. -/
+inductive IsMvQuotientRemainderₙ
+  : CMvPolynomial σ R → List (CMvPolynomial σ R) → List (CMvPolynomial σ R) →
+    CMvPolynomial σ R → Prop
+  | nil (f : CMvPolynomial σ R) : IsMvQuotientRemainderₙ f [] [] f
+  | cons {f g q r₀ r : CMvPolynomial σ R} {gs qs : List (CMvPolynomial σ R)}
+    (h₁ : IsMvQuotientRemainder ord f g q r₀)
+    (h₂ : IsMvQuotientRemainderₙ r₀ gs qs r) :
+    IsMvQuotientRemainderₙ f (g :: gs) (q :: qs) r
+
+/-- Divide `f` successively by each polynomial in `gs`, returning the per-divisor quotients and
+    the final remainder. -/
+def mvDivideₙ (f : CMvPolynomial σ R) (gs : List (CMvPolynomial σ R))
+    (hgs_nz : ∀ g ∈ gs, g ≠ 0) : List (CMvPolynomial σ R) × CMvPolynomial σ R :=
+  match gs with
+  | [] => ([], f)
+  | g :: gs' =>
+      let hg : g ≠ 0 := hgs_nz g (by simp)
+      let qr := mvDivide ord f g hg
+      let hgs'_nz : ∀ g' ∈ gs', g' ≠ 0 := by
+        intro g' hg'
+        exact hgs_nz g' (by simp [hg'])
+      let qrs := mvDivideₙ qr.2 gs' hgs'_nz
+      (qr.1 :: qrs.1, qrs.2)
+
+/-- Correctness of list-division: `mvDivideₙ` satisfies `IsMvQuotientRemainderₙ`. -/
+theorem mvDivideₙ.correct (f : CMvPolynomial σ R) (gs : List (CMvPolynomial σ R))
+    (hgs_nz : ∀ g ∈ gs, g ≠ 0) :
+  IsMvQuotientRemainderₙ (ord := ord)
+      f gs (mvDivideₙ (ord := ord) f gs hgs_nz).1 (mvDivideₙ (ord := ord) f gs hgs_nz).2 := by
+  induction gs generalizing f with
+  | nil =>
+      simp [mvDivideₙ, IsMvQuotientRemainderₙ.nil]
+  | cons g gs ih =>
+      have hg : g ≠ 0 := hgs_nz g (by simp)
+      have hgs'_nz : ∀ g' ∈ gs, g' ≠ 0 := by
+        intro g' hg'
+        exact hgs_nz g' (by simp [hg'])
+      rcases hqr : mvDivide ord f g hg with ⟨q, r₀⟩
+      have hsingle : IsMvQuotientRemainder ord f g q r₀ := by
+        simpa [hqr] using (mvDivide.correct (ord := ord) f g hg)
+      have hrest :
+          IsMvQuotientRemainderₙ (ord := ord)
+            r₀ gs
+            (mvDivideₙ (ord := ord) r₀ gs hgs'_nz).1
+            (mvDivideₙ (ord := ord) r₀ gs hgs'_nz).2 := by
+        exact ih (f := r₀) hgs'_nz
+      simpa [mvDivideₙ, hg, hqr, hgs'_nz] using
+        (IsMvQuotientRemainderₙ.cons (ord := ord)
+          (f := f) (g := g) (gs := gs)
+          (q := q) (qs := (mvDivideₙ (ord := ord) r₀ gs hgs'_nz).1)
+          (r₀ := r₀) (r := (mvDivideₙ (ord := ord) r₀ gs hgs'_nz).2)
+          hsingle hrest)
 
 end CMvPolynomial

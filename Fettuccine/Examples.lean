@@ -2,7 +2,9 @@ import Fettuccine.CMonomialOrder
 import Fettuccine.CMonomialOrder.Grlex
 import Fettuccine.CMonomialOrder.Grevlex
 import Fettuccine.CMvPolynomial
+import Fettuccine.Buchberger
 import Fettuccine.Repr
+import Fettuccine.Tactic
 
 namespace Examples
 
@@ -135,5 +137,35 @@ example : f₂.leadingMonomial grevlex = 0 := by
   decide
 
 end LeadingMonomial
+
+namespace Buchberger
+
+open CMonomialOrder CMvPolynomial
+
+def x : CMvPolynomial σ Rat := X 0
+def y : CMvPolynomial σ Rat := X 1
+def z : CMvPolynomial σ Rat := X 2
+
+def I : Ideal (CMvPolynomial σ Rat) :=
+  Ideal.span ({x * y - 1, x^2 - y} : Set (CMvPolynomial σ Rat))
+
+def I' : Ideal (CMvPolynomial σ Rat) :=
+  Ideal.span ({x*y - z, x*z - y, y*z - x} : Set (CMvPolynomial σ Rat))
+
+set_option linter.unusedTactic false in
+example : True := by
+  haveI : WellFoundedGT σ := inferInstance
+  groebnerBasis I' (CMonomialOrder.lex (σ := σ))
+  trivial
+
+def gens : List (CMvPolynomial σ Rat) := [x * y - 1, x^2 - y]
+def gens' : List (CMvPolynomial σ Rat) := [x * y - z, x * z - y, y * z - x]
+
+#eval (CMvPolynomial.buchbergerAlgorithm (ord := CMonomialOrder.lex) gens 32)
+  |>.map (fun f => f.withOrdering CMonomialOrder.lex)
+#eval (CMvPolynomial.buchbergerAlgorithm (ord := CMonomialOrder.lex) gens' 32)
+  |>.map (fun f => f.withOrdering CMonomialOrder.lex)
+
+end Buchberger
 
 end Examples
