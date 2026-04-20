@@ -101,33 +101,9 @@ def f₂ : MvPolynomial σ Int := 0
 
 #eval f₁.leadingMonomial lex
 #eval f₂.leadingMonomial lex
-
--- On current Lean toolchains, `#eval` of leading monomials under grlex/grevlex usually segfaults.
--- #eval f₁.leadingMonomial grlex
--- #eval f₂.leadingMonomial grlex
--- #eval f₁.leadingMonomial grevlex
--- #eval f₂.leadingMonomial grevlex
-
--- We can work out what it is through reduction, though...
-def m_grlex := f₁.leadingMonomial grlex
-#reduce m_grlex 0
-#reduce m_grlex 1
-#reduce m_grlex 2
-
--- We can work out what it is through reduction, though...
-def m_grevlex := f₁.leadingMonomial grevlex
-#reduce m_grevlex 0
-#reduce m_grevlex 1
-#reduce m_grevlex 2
-
-example : f₁.leadingMonomial grlex = (3 • Monomial.X (σ := σ) 1) := by
-  decide
-example : f₂.leadingMonomial grlex = 0 := by
-  decide
-
-example : f₁.leadingMonomial grevlex = (3 • Monomial.X (σ := σ) 1) := by
-  decide
-example : f₂.leadingMonomial grevlex = 0 := by
-  decide
+#eval f₁.leadingMonomial grlex
+#eval f₂.leadingMonomial grlex
+#eval f₁.leadingMonomial grevlex
+#eval f₂.leadingMonomial grevlex
 
 end LeadingMonomial

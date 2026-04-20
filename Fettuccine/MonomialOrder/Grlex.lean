@@ -270,4 +270,11 @@ theorem grlex.IsGraded : (grlex (σ := σ)).IsGraded := by
   exact (DFinsupp.Grlex.lt_iff (a := toGrlex m₁) (b := toGrlex m₂)).mpr
     (Or.inl (by simpa using hdeg))
 
+/-- Type-level tag for graded lexicographic monomial order. -/
+inductive GrlexOrder : Type where
+  | mk
+
+instance grlexOrderTag : MonomialOrderTag GrlexOrder σ where
+  ord := grlex
+
 end MonomialOrder

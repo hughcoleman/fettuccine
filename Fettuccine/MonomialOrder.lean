@@ -146,7 +146,12 @@ variable {R : Type*} [DecidableEq R] [CommSemiring R]
 namespace MvPolynomial
 
 /-- The **leading monomial** of a polynomial `f` with respect to a monomial order `ord`. -/
-def leadingMonomial (f : MvPolynomial σ R) : Monomial σ :=
+-- The `@[inline]` annotation is necessary: otherwise, Lean unpredictably segfaults when it is
+-- asked to evaluate this against the `grlex` or `grevlex` orders (but not the `lex` order,
+-- strangely). According to the Agent that spent several hours experimenting, it has something to
+-- do with how Lean is forced to funnel through `MonomialOrder` when it is asked to evaluate `<`
+-- against a "generic" order. For details, see `MonomialOrderTag` below.
+@[inline] def leadingMonomial (f : MvPolynomial σ R) : Monomial σ :=
   ord.toSyn.symm (f.support.sup ord.toSyn)
 
 /-- Notation for the leading monomial of a polynomial under a given monomial order. -/
@@ -328,3 +333,25 @@ lemma leadingMonomial_mul [NoZeroDivisors R] (f g : MvPolynomial σ R) (hf : f �
 end MvPolynomial
 
 end LeadingMonomial
+
+namespace MonomialOrder
+
+universe u v
+
+/-- A type-level tag for a computable monomial order. -/
+-- Passing a `MonomialOrder` as a value-level argument causes issues with native evaluation, since
+-- it forces the compiler to funnel computation through the projections of `MonomialOrder`. This
+-- can cause Lean to segfault. By introducing a type-level "tag" for monomial orders, we can make
+-- computations generic over the tag, enabling specialization for concrete orders.
+class MonomialOrderTag (tag : Type v) (σ : Type u) [DecidableEq σ] where
+  ord : MonomialOrder.{u, u} σ
+
+/-- Type-level tag for lexicographic monomial order. -/
+inductive LexOrder : Type where
+  | mk
+
+instance lexOrderTag {σ : Type*} [DecidableEq σ] [LinearOrder σ] [WellFoundedGT σ] :
+    MonomialOrderTag LexOrder σ where
+  ord := lex
+
+end MonomialOrder

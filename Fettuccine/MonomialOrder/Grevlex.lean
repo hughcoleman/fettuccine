@@ -306,4 +306,11 @@ theorem grevlex.IsGraded : (grevlex (σ := σ)).IsGraded := by
       ℕ ×ₗ Colex (Π₀ _ : σᵒᵈ, ℕ))
   exact Prod.Lex.toLex_lt_toLex.mpr (Or.inl hdeg)
 
+/-- Type-level tag for graded reverse lexicographic monomial order. -/
+inductive GrevlexOrder : Type where
+  | mk
+
+instance grevlexOrderTag : MonomialOrderTag GrevlexOrder σ where
+  ord := grevlex
+
 end MonomialOrder
