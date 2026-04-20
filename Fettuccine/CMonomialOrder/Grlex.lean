@@ -1,4 +1,4 @@
-import Fettuccine.MonomialOrder
+import Fettuccine.CMonomialOrder
 import Mathlib.Algebra.Group.TransferInstance
 import Mathlib.Data.DFinsupp.Lex
 
@@ -7,16 +7,16 @@ import Mathlib.Data.DFinsupp.Lex
 
 This file provides an implementation of the graded lexicographic order on monomials. For the most
 part, the structure of this file largely mirrors the implementation of the homogeneous
-lexicographic order in Mathlib/Data/Finsupp/MonomialOrder/DegLex.lean.
+lexicographic order in Mathlib/Data/Finsupp/CMonomialOrder/DegLex.lean.
 
 ## Definitions
 
 * `Grlex ι` : a type synonym used to equip a type with the graded lexicographic order.
-* `MonomialOrder.grlex` : the graded lexicographic monomial order on `Monomial σ`.
+* `CMonomialOrder.grlex` : the graded lexicographic monomial order on `CMonomial σ`.
 
 ## Theorems
 
-* `MonomialOrder.grlex.IsGraded` : the graded lexicographic order is graded.
+* `CMonomialOrder.grlex.IsGraded` : the graded lexicographic order is graded.
 -/
 
 /-- A type synonym to equip a type with its graded lexicographic order. -/
@@ -76,12 +76,12 @@ open scoped Function in
 protected def Grlex (r : ι → ι → Prop) (s : ℕ → ℕ → Prop) :
     (Π₀ _ : ι, ℕ) → (Π₀ _ : ι, ℕ) → Prop :=
   (Prod.Lex s (DFinsupp.Lex r (fun _ ↦ s))) on
-    (fun x ↦ (Monomial.degree (σ := ι) x, x))
+    (fun x ↦ (CMonomial.degree (σ := ι) x, x))
 
 theorem grlex_def {r : ι → ι → Prop} {s : ℕ → ℕ → Prop} {a b : Π₀ _ : ι, ℕ} :
     DFinsupp.Grlex r s a b ↔
       Prod.Lex s (DFinsupp.Lex r (fun _ ↦ s))
-        (Monomial.degree (σ := ι) a, a) (Monomial.degree (σ := ι) b, b) :=
+        (CMonomial.degree (σ := ι) a, a) (CMonomial.degree (σ := ι) b, b) :=
   Iff.rfl
 
 namespace Grlex
@@ -102,14 +102,14 @@ instance [LT ι] : LT (Grlex (Π₀ _ : ι, ℕ)) :=
 
 theorem lt_def [LT ι] {a b : Grlex (Π₀ _ : ι, ℕ)} :
     a < b ↔
-      (toLex (Monomial.degree (σ := ι) (ofGrlex a), toLex (ofGrlex a))) <
-        (toLex (Monomial.degree (σ := ι) (ofGrlex b), toLex (ofGrlex b))) :=
+      (toLex (CMonomial.degree (σ := ι) (ofGrlex a), toLex (ofGrlex a))) <
+        (toLex (CMonomial.degree (σ := ι) (ofGrlex b), toLex (ofGrlex b))) :=
   Iff.rfl
 
 theorem lt_iff [LT ι] {a b : Grlex (Π₀ _ : ι, ℕ)} :
     a < b ↔
-      Monomial.degree (σ := ι) (ofGrlex a) < Monomial.degree (σ := ι) (ofGrlex b) ∨
-      (Monomial.degree (σ := ι) (ofGrlex a) = Monomial.degree (σ := ι) (ofGrlex b) ∧
+      CMonomial.degree (σ := ι) (ofGrlex a) < CMonomial.degree (σ := ι) (ofGrlex b) ∨
+      (CMonomial.degree (σ := ι) (ofGrlex a) = CMonomial.degree (σ := ι) (ofGrlex b) ∧
         toLex (ofGrlex a) < toLex (ofGrlex b)) := by
   simp [lt_def, Prod.Lex.toLex_lt_toLex]
 
@@ -118,8 +118,8 @@ variable [LinearOrder ι]
 instance isStrictOrder : IsStrictOrder (Grlex (Π₀ _ : ι, ℕ)) (· < ·) where
   irrefl := fun a ↦ by
     change ¬
-      toLex (Monomial.degree (σ := ι) (ofGrlex a), toLex (ofGrlex a)) <
-        toLex (Monomial.degree (σ := ι) (ofGrlex a), toLex (ofGrlex a))
+      toLex (CMonomial.degree (σ := ι) (ofGrlex a), toLex (ofGrlex a)) <
+        toLex (CMonomial.degree (σ := ι) (ofGrlex a), toLex (ofGrlex a))
     exact lt_irrefl _
   trans := by
     intro a b c hab hbc
@@ -136,7 +136,7 @@ instance isStrictOrder : IsStrictOrder (Grlex (Π₀ _ : ι, ℕ)) (· < ·) whe
 instance : LinearOrder (Grlex (Π₀ _ : ι, ℕ)) :=
   LinearOrder.lift'
     (fun f : Grlex (Π₀ _ : ι, ℕ) ↦
-      toLex (Monomial.degree (σ := ι) (ofGrlex f), toLex (ofGrlex f)))
+      toLex (CMonomial.degree (σ := ι) (ofGrlex f), toLex (ofGrlex f)))
     (fun f g hfg ↦ by
       apply ofGrlex_injective
       apply toLex.injective
@@ -145,8 +145,8 @@ instance : LinearOrder (Grlex (Π₀ _ : ι, ℕ)) :=
 set_option backward.isDefEq.respectTransparency false in
 theorem le_iff {x y : Grlex (Π₀ _ : ι, ℕ)} :
     x ≤ y ↔
-      Monomial.degree (σ := ι) (ofGrlex x) < Monomial.degree (σ := ι) (ofGrlex y) ∨
-      (Monomial.degree (σ := ι) (ofGrlex x) = Monomial.degree (σ := ι) (ofGrlex y) ∧
+      CMonomial.degree (σ := ι) (ofGrlex x) < CMonomial.degree (σ := ι) (ofGrlex y) ∨
+      (CMonomial.degree (σ := ι) (ofGrlex x) = CMonomial.degree (σ := ι) (ofGrlex y) ∧
         toLex (ofGrlex x) ≤ toLex (ofGrlex y)) := by
   simp only [le_iff_eq_or_lt, lt_iff]
   by_cases h : x = y
@@ -159,11 +159,11 @@ theorem le_iff {x y : Grlex (Π₀ _ : ι, ℕ)} :
 instance : IsOrderedCancelAddMonoid (Grlex (Π₀ _ : ι, ℕ)) where
   le_of_add_le_add_left a b c h := by
     rw [DFinsupp.Grlex.le_iff] at h ⊢
-    simpa only [ofGrlex_add, Monomial.degree_add, map_add, toLex_add, add_lt_add_iff_left,
+    simpa only [ofGrlex_add, CMonomial.degree_add, map_add, toLex_add, add_lt_add_iff_left,
       add_right_inj, add_le_add_iff_left] using h
   add_le_add_left a b h c := by
     rw [DFinsupp.Grlex.le_iff] at h ⊢
-    simpa [ofGrlex_add, Monomial.degree_add, map_add, toLex_add] using h
+    simpa [ofGrlex_add, CMonomial.degree_add, map_add, toLex_add] using h
 
 set_option backward.isDefEq.respectTransparency false in
 theorem single_strictAnti : StrictAnti (fun (a : ι) ↦
@@ -171,7 +171,7 @@ theorem single_strictAnti : StrictAnti (fun (a : ι) ↦
   intro a b h
   rw [DFinsupp.Grlex.lt_iff]
   refine Or.inr ⟨?_, ?_⟩
-  · simp [Monomial.degree, DFinsupp.support_single_ne_zero]
+  · simp [CMonomial.degree, DFinsupp.support_single_ne_zero]
   · rw [DFinsupp.Lex.lt_iff]
     refine ⟨a, ?_, ?_⟩
     · intro j hj
@@ -194,7 +194,7 @@ theorem single_le_iff {a b : ι} :
   single_strictAnti.le_iff_ge
 
 theorem monotone_degree :
-    Monotone (fun x : Grlex (Π₀ _ : ι, ℕ) ↦ Monomial.degree (σ := ι) (ofGrlex x)) := by
+    Monotone (fun x : Grlex (Π₀ _ : ι, ℕ) ↦ CMonomial.degree (σ := ι) (ofGrlex x)) := by
   intro x y
   rw [DFinsupp.Grlex.le_iff]
   rintro (h | h)
@@ -205,10 +205,10 @@ instance orderBot : OrderBot (Grlex (Π₀ _ : ι, ℕ)) where
   bot := toGrlex (0 : Π₀ _ : ι, ℕ)
   bot_le x := by
     rw [DFinsupp.Grlex.le_iff]
-    by_cases hdeg : 0 < Monomial.degree (σ := ι) (ofGrlex x)
+    by_cases hdeg : 0 < CMonomial.degree (σ := ι) (ofGrlex x)
     · exact Or.inl (by simpa [ofGrlex_toGrlex] using hdeg)
     · refine Or.inr ⟨?_, ?_⟩
-      · have hzero : Monomial.degree (σ := ι) (ofGrlex x) = 0 := Nat.eq_zero_of_not_pos hdeg
+      · have hzero : CMonomial.degree (σ := ι) (ofGrlex x) = 0 := Nat.eq_zero_of_not_pos hdeg
         simpa [ofGrlex_toGrlex] using hzero.symm
       · simpa [ofGrlex_toGrlex] using
           (DFinsupp.toLex_monotone (show (0 : Π₀ _ : ι, ℕ) ≤ ofGrlex x from
@@ -221,13 +221,13 @@ end Grlex
 
 end DFinsupp
 
-namespace MonomialOrder
+namespace CMonomialOrder
 
 variable {σ : Type*} [DecidableEq σ] [LinearOrder σ] [WellFoundedGT σ]
 
 set_option backward.isDefEq.respectTransparency false in
 /-- The graded lexicographic order on monomials. -/
-def grlex : MonomialOrder σ where
+def grlex : CMonomialOrder σ where
   syn := Grlex (Π₀ _ : σ, ℕ)
   acm := by
     rw [Grlex]
@@ -243,14 +243,14 @@ def grlex : MonomialOrder σ where
     · exact Or.inl ha
     · refine Or.inr ⟨le_antisymm ?_ ha, DFinsupp.toLex_monotone h⟩
       rw [← add_tsub_cancel_of_le h]
-      simp [Monomial.degree_add]
+      simp [CMonomial.degree_add]
   wf := by infer_instance
 
-theorem grlex_le_iff {a b : Monomial σ} :
+theorem grlex_le_iff {a b : CMonomial σ} :
     a ≼[grlex] b ↔ toGrlex a ≤ toGrlex b := by
   rfl
 
-theorem grlex_lt_iff {a b : Monomial σ} :
+theorem grlex_lt_iff {a b : CMonomial σ} :
     a ≺[grlex] b ↔ toGrlex a < toGrlex b := by
   rfl
 
@@ -277,4 +277,4 @@ inductive GrlexOrder : Type where
 instance grlexOrderTag : MonomialOrderTag GrlexOrder σ where
   ord := grlex
 
-end MonomialOrder
+end CMonomialOrder

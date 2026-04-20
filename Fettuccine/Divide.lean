@@ -1,10 +1,10 @@
-import Fettuccine.MonomialOrder
-import Fettuccine.MvPolynomial
+import Fettuccine.CMonomialOrder
+import Fettuccine.CMvPolynomial
 
 /-!
 # Multivariate Polynomial Division
 
-This file defines the division algorithm for `MvPolynomial σ R` with respect to a monomial order.
+This file defines the division algorithm for `CMvPolynomial σ R` with respect to a monomial order.
 
 ## Definitions
 
@@ -20,16 +20,16 @@ This file defines the division algorithm for `MvPolynomial σ R` with respect to
 * `mvDivide.unique` : the statement that division is uniquely determined.
 -/
 
-namespace Monomial
+namespace CMonomial
 
 variable {σ : Type*} [DecidableEq σ]
 
 -- The predicate for monomial divisibility.
-def divides? (m₁ m₂ : Monomial σ) : Prop :=
+def divides? (m₁ m₂ : CMonomial σ) : Prop :=
   ∀ i ∈ m₁.support, m₁ i ≤ m₂ i
 
 /-- Divisibility of monomials is decidable. -/
-instance (m₁ m₂ : Monomial σ) : Decidable (divides? m₁ m₂) := by
+instance (m₁ m₂ : CMonomial σ) : Decidable (divides? m₁ m₂) := by
   -- `exact Classical.propDecidable (m₁.divides? m₂)` closes this goal, but is noncomputable. We can
   -- do better by rewriting `∀ i ∈ σ, i ∈ m₁.support → m₁ i ≤ m₂ i` over an explicitly finite set.
   refine decidable_of_iff (∀ i : {i // i ∈ m₁.support}, m₁ i ≤ m₂ i) ?_
@@ -40,7 +40,7 @@ instance (m₁ m₂ : Monomial σ) : Decidable (divides? m₁ m₂) := by
     exact h i i.property
 
 /-- Divide monomials if possible, returning the quotient. -/
-def divide (m₁ m₂ : Monomial σ) : Option (Monomial σ) :=
+def divide (m₁ m₂ : CMonomial σ) : Option (CMonomial σ) :=
   if _ : divides? m₂ m₁ then
     some (m₁ - m₂)
   else
@@ -48,7 +48,7 @@ def divide (m₁ m₂ : Monomial σ) : Option (Monomial σ) :=
 
 /-- `m₁` is divisible by `m₂` if and only if their quotient is defined (and is their pointwise
     difference). -/
-lemma divide_eq_iff {m₁ m₂ : Monomial σ} : divides? m₂ m₁ ↔ divide m₁ m₂ = some (m₁ - m₂) := by
+lemma divide_eq_iff {m₁ m₂ : CMonomial σ} : divides? m₂ m₁ ↔ divide m₁ m₂ = some (m₁ - m₂) := by
   constructor
   · intro h; simp [divide, h]
   · intro h
@@ -60,7 +60,7 @@ lemma divide_eq_iff {m₁ m₂ : Monomial σ} : divides? m₂ m₁ ↔ divide m�
       simp_all only [reduceCtorEq]
 
 /-- `m₁` is not divisible by `m₂` if and only if their quotient is not defined. -/
-lemma notDivide_eq_iff {m₁ m₂ : Monomial σ} : ¬ divides? m₂ m₁ ↔ divide m₁ m₂ = none := by
+lemma notDivide_eq_iff {m₁ m₂ : CMonomial σ} : ¬ divides? m₂ m₁ ↔ divide m₁ m₂ = none := by
   constructor
   · intro h; simp [divide, h]
   · intro h hdiv
@@ -69,7 +69,7 @@ lemma notDivide_eq_iff {m₁ m₂ : Monomial σ} : ¬ divides? m₂ m₁ ↔ div
     simp_all only [reduceCtorEq]
 
 -- The statement that we can quantifying over `σ` or `m₁.support` in the definition of `divides?`.
-lemma divides?_iff (m₁ m₂ : Monomial σ) : divides? m₁ m₂ ↔ ∀ i, m₁ i ≤ m₂ i := by
+lemma divides?_iff (m₁ m₂ : CMonomial σ) : divides? m₁ m₂ ↔ ∀ i, m₁ i ≤ m₂ i := by
   constructor
   · intro h i
     by_cases hi : i ∈ m₁.support
@@ -79,33 +79,33 @@ lemma divides?_iff (m₁ m₂ : Monomial σ) : divides? m₁ m₂ ↔ ∀ i, m�
     exact h i
 
 /-- The lowest common multiple of two monomials is divisible by its left factor. -/
-lemma divides?_lcm_left (m₁ m₂ : Monomial σ) : divides? m₁ (lcm m₁ m₂) := by
+lemma divides?_lcm_left (m₁ m₂ : CMonomial σ) : divides? m₁ (lcm m₁ m₂) := by
   intro i hi; simp [lcm, DFinsupp.zipWith_apply]
 
 /-- The lowest common multiple of two monomials is divisible by its right factor. -/
-lemma divides?_lcm_right (m₁ m₂ : Monomial σ) : divides? m₂ (lcm m₁ m₂) := by
+lemma divides?_lcm_right (m₁ m₂ : CMonomial σ) : divides? m₂ (lcm m₁ m₂) := by
   intro i hi; simp [lcm, DFinsupp.zipWith_apply]
 
-end Monomial
+end CMonomial
 
-open MonomialOrder
-open scoped MonomialOrder
+open CMonomialOrder
+open scoped CMonomialOrder
 
 variable {σ : Type*} [DecidableEq σ]
 variable {R : Type*} [DecidableEq R] [Field R]
 
-namespace MvPolynomial
+namespace CMvPolynomial
 
-variable (ord : MonomialOrder σ)
+variable (ord : CMonomialOrder σ)
 
 /-- The statement that a given pair of polynomials are a (the) quotient and remainder of a
     particular polynomial division. -/
-def IsMvQuotientRemainder (f g q r : MvPolynomial σ R) : Prop :=
-  f = g * q + r ∧ (∀ m ∈ r.support, ¬ Monomial.divides? in[ord](g) m)
+def IsMvQuotientRemainder (f g q r : CMvPolynomial σ R) : Prop :=
+  f = g * q + r ∧ (∀ m ∈ r.support, ¬ CMonomial.divides? in[ord](g) m)
 
 /-- The support of a difference of two polynomials is contained in the union of the supports of both
     summands. -/
-lemma support_sub_subset (f g : MvPolynomial σ R) : (f - g).support ⊆ f.support ∪ g.support := by
+lemma support_sub_subset (f g : CMvPolynomial σ R) : (f - g).support ⊆ f.support ∪ g.support := by
   -- For some reason this needs to be made explicit; `DFinsupp.support_neg` doesn't match. Possibly
   -- because of variable names?
   have hneg : (-g).support = g.support :=
@@ -116,7 +116,7 @@ set_option linter.unusedDecidableInType false in
 /-- If `R` is a domain, then a polynomial ring over `R` is also a domain. -/
 -- Despite the statement, this instance "technically" depends on the underlying choice of monomial
 -- order. It would be nice to eliminate this somehow?
-instance noZeroDivisors : NoZeroDivisors (MvPolynomial σ R) where
+instance noZeroDivisors : NoZeroDivisors (CMvPolynomial σ R) where
   eq_zero_or_eq_zero_of_mul_eq_zero := by
     intro a b h
     -- We can assume a ≠ 0 and b ≠ 0, because otherwise the conclusion is trivial.
@@ -135,8 +135,8 @@ instance noZeroDivisors : NoZeroDivisors (MvPolynomial σ R) where
               := by exact (leadingCoefficient_mul ord a b ha hb).symm
         _ = 0 := by simp [h]
     exact (mul_ne_zero
-      (MvPolynomial.leadingCoefficient_ne_zero ord a ha)
-      (MvPolynomial.leadingCoefficient_ne_zero ord b hb)) hzero
+      (CMvPolynomial.leadingCoefficient_ne_zero ord a ha)
+      (CMvPolynomial.leadingCoefficient_ne_zero ord b hb)) hzero
 
 -- Instantiate instances of `LinearOrder` and `WellFoundedRelation` on `ord.syn` so that the
 -- termination measure for `mvDivide` is interpreted correctly.
@@ -149,21 +149,21 @@ namespace mvDivide
 
 /-- The metric type for `mvDivide`, which consists of the leading monomial paired with the
     cardinality of its support. -/
-abbrev Metric (ord : MonomialOrder σ) : Type _ := ord.syn × Nat
+abbrev Metric (ord : CMonomialOrder σ) : Type _ := ord.syn × Nat
 
 /-- The lexicographic relation used by the `mvDivide` termination metric. -/
-abbrev MetricRel (ord : MonomialOrder σ) : Metric ord → Metric ord → Prop :=
+abbrev MetricRel (ord : CMonomialOrder σ) : Metric ord → Metric ord → Prop :=
   Prod.Lex (fun x1 x2 => x1 < x2) (fun a₁ a₂ => a₁ < a₂)
 
 /-- The termination metric for `mvDivide`. -/
-def metric (ord : MonomialOrder σ) (f : MvPolynomial σ R) : Metric ord :=
+def metric (ord : CMonomialOrder σ) (f : CMvPolynomial σ R) : Metric ord :=
   (ord.toSyn in[ord](f), f.support.card)
 
 end mvDivide
 
 /-- If two polynomials have the same leading terms, then their difference has a strictly smaller
     leading term (with respect to the lexicographic measure). -/
-private lemma metric_sub_lt_of_same_leadingTerm (f h : MvPolynomial σ R) (hf : f ≠ 0)
+private lemma metric_sub_lt_of_same_leadingTerm (f h : CMvPolynomial σ R) (hf : f ≠ 0)
     (hlm : in[ord](h) = in[ord](f))
     (hlc : leadingCoefficient ord h = leadingCoefficient ord f) :
     mvDivide.MetricRel ord (mvDivide.metric ord (f - h)) (mvDivide.metric ord f) := by
@@ -187,9 +187,9 @@ private lemma metric_sub_lt_of_same_leadingTerm (f h : MvPolynomial σ R) (hf : 
     calc
       (f - h).coefficientOf in[ord](f)
           = f.coefficientOf in[ord](f) - h.coefficientOf in[ord](f) := by
-            simp [MvPolynomial.coefficientOf]
+            simp [CMvPolynomial.coefficientOf]
       _ = leadingCoefficient ord f - leadingCoefficient ord h := by
-            simp [MvPolynomial.leadingCoefficient, MvPolynomial.coefficientOf, hlm]
+            simp [CMvPolynomial.leadingCoefficient, CMvPolynomial.coefficientOf, hlm]
       _ = 0 := by
             exact sub_eq_zero.mpr hlc.symm
   by_cases heq : ord.toSyn in[ord](f - h) = ord.toSyn in[ord](f)
@@ -202,7 +202,7 @@ private lemma metric_sub_lt_of_same_leadingTerm (f h : MvPolynomial σ R) (hf : 
       have hneq_lm : in[ord](f - h) ≠ in[ord](f) := by
         intro hEq
         have hcoeff_nz : (f - h).coefficientOf in[ord](f) ≠ 0 := by
-          simpa [MvPolynomial.coefficientOf, hEq] using
+          simpa [CMvPolynomial.coefficientOf, hEq] using
             (mem_support_iff (f - h) in[ord](f - h)).1 hmem_sub
         exact hcoeff_nz hcancel
       have hneq_syn : ord.toSyn in[ord](f - h) ≠ ord.toSyn in[ord](f) := by
@@ -216,14 +216,14 @@ private lemma metric_sub_lt_of_same_leadingTerm (f h : MvPolynomial σ R) (hf : 
     exact lt_of_le_of_ne hle heq
 
 /-- Decrease lemma for the `none` branch of `mvDivide`. -/
-lemma mvDivide_decreases_none_branch (f g : MvPolynomial σ R) (hf : f ≠ 0)
-  (_hm : Monomial.divide in[ord](f) in[ord](g) = none) :
+lemma mvDivide_decreases_none_branch (f g : CMvPolynomial σ R) (hf : f ≠ 0)
+  (_hm : CMonomial.divide in[ord](f) in[ord](g) = none) :
     mvDivide.MetricRel ord
       (mvDivide.metric ord (f - leadingTerm ord f))
       (mvDivide.metric ord f) := by
   -- [TO-REVIEW]
   have hf_coeff : leadingCoefficient ord f ≠ 0 :=
-    MvPolynomial.leadingCoefficient_ne_zero ord f hf
+    CMvPolynomial.leadingCoefficient_ne_zero ord f hf
   have hlm : in[ord](leadingTerm ord f) = in[ord](f) := by
     unfold leadingTerm
     simpa [leadingCoefficient] using
@@ -234,17 +234,17 @@ lemma mvDivide_decreases_none_branch (f g : MvPolynomial σ R) (hf : f ≠ 0)
           = (leadingTerm ord f).coefficientOf in[ord](leadingTerm ord f) := rfl
       _ = (leadingTerm ord f).coefficientOf in[ord](f) := by rw [hlm]
       _ = leadingCoefficient ord f := by
-            change (MvPolynomial.ofMonomial in[ord](f)
+            change (CMvPolynomial.ofMonomial in[ord](f)
               (leadingCoefficient ord f)).coefficientOf in[ord](f) = leadingCoefficient ord f
-            simp [MvPolynomial.ofMonomial, MvPolynomial.leadingCoefficient,
-              MvPolynomial.coefficientOf]
+            simp [CMvPolynomial.ofMonomial, CMvPolynomial.leadingCoefficient,
+              CMvPolynomial.coefficientOf]
   exact metric_sub_lt_of_same_leadingTerm
     ord f (leadingTerm ord f) hf hlm hlc
 
 /-- Decrease lemma for the `some` branch of `mvDivide`. -/
-lemma mvDivide_decreases_some_branch (f g : MvPolynomial σ R) (hf : f ≠ 0) (hg : g ≠ 0)
-    (m : Monomial σ) (hm : Monomial.divide in[ord](f) in[ord](g) = some m) :
-    let c := MvPolynomial.ofMonomial m (leadingCoefficient ord f / leadingCoefficient ord g)
+lemma mvDivide_decreases_some_branch (f g : CMvPolynomial σ R) (hf : f ≠ 0) (hg : g ≠ 0)
+    (m : CMonomial σ) (hm : CMonomial.divide in[ord](f) in[ord](g) = some m) :
+    let c := CMvPolynomial.ofMonomial m (leadingCoefficient ord f / leadingCoefficient ord g)
     mvDivide.MetricRel ord
       (mvDivide.metric ord (f - c * g))
       (mvDivide.metric ord f) := by
@@ -252,34 +252,34 @@ lemma mvDivide_decreases_some_branch (f g : MvPolynomial σ R) (hf : f ≠ 0) (h
   classical
   dsimp
   have hf_coeff : leadingCoefficient ord f ≠ 0 :=
-    MvPolynomial.leadingCoefficient_ne_zero ord f hf
+    CMvPolynomial.leadingCoefficient_ne_zero ord f hf
   have hg_coeff : leadingCoefficient ord g ≠ 0 :=
-    MvPolynomial.leadingCoefficient_ne_zero ord g hg
-  have hdiv : Monomial.divides? in[ord](g) in[ord](f) := by
-    by_cases h : Monomial.divides? in[ord](g) in[ord](f)
+    CMvPolynomial.leadingCoefficient_ne_zero ord g hg
+  have hdiv : CMonomial.divides? in[ord](g) in[ord](f) := by
+    by_cases h : CMonomial.divides? in[ord](g) in[ord](f)
     · exact h
-    · simp [Monomial.divide, h] at hm
+    · simp [CMonomial.divide, h] at hm
   have hm' : in[ord](f) - in[ord](g) = m := by
-    simpa [Monomial.divide, hdiv] using hm
+    simpa [CMonomial.divide, hdiv] using hm
   have hdiv_all : ∀ i, in[ord](g) i ≤ in[ord](f) i :=
-    (Monomial.divides?_iff in[ord](g) in[ord](f)).1 hdiv
+    (CMonomial.divides?_iff in[ord](g) in[ord](f)).1 hdiv
   have hmadd : m + in[ord](g) = in[ord](f) := by
     rw [← hm']
     ext i
     exact Nat.sub_add_cancel (hdiv_all i)
-  let c : MvPolynomial σ R :=
-    MvPolynomial.ofMonomial m (leadingCoefficient ord f / leadingCoefficient ord g)
+  let c : CMvPolynomial σ R :=
+    CMvPolynomial.ofMonomial m (leadingCoefficient ord f / leadingCoefficient ord g)
   have hcoeffc : leadingCoefficient ord f / leadingCoefficient ord g ≠ 0 :=
     div_ne_zero hf_coeff hg_coeff
   have hc0 : c ≠ 0 := by
     intro hc
     have hcm : c.coefficientOf m = 0 := by
-      simp [MvPolynomial.coefficientOf, hc]
+      simp [CMvPolynomial.coefficientOf, hc]
     have hcm' : c.coefficientOf m = leadingCoefficient ord f / leadingCoefficient ord g := by
-      change MvPolynomial.coefficientOf
-          (MvPolynomial.ofMonomial m (leadingCoefficient ord f / leadingCoefficient ord g)) m =
+      change CMvPolynomial.coefficientOf
+          (CMvPolynomial.ofMonomial m (leadingCoefficient ord f / leadingCoefficient ord g)) m =
         leadingCoefficient ord f / leadingCoefficient ord g
-      simp [MvPolynomial.ofMonomial]
+      simp [CMvPolynomial.ofMonomial]
     exact hcoeffc (hcm' ▸ hcm)
   have hlm_c : in[ord](c) = m := by
     simpa [c] using
@@ -295,20 +295,20 @@ lemma mvDivide_decreases_some_branch (f g : MvPolynomial σ R) (hf : f ≠ 0) (h
     have hcoeff_top :
         (c * g).coefficientOf (in[ord](c) + in[ord](g)) =
           c.coefficientOf in[ord](c) * g.coefficientOf in[ord](g) := by
-      simpa [MvPolynomial.leadingCoefficient] using
+      simpa [CMvPolynomial.leadingCoefficient] using
         leadingCoefficient_mul ord c g hc0 hg
     have hc_eval :
       c.coefficientOf in[ord](c) = leadingCoefficient ord f / leadingCoefficient ord g := by
       rw [hlm_c]
-      change MvPolynomial.coefficientOf
-          (MvPolynomial.ofMonomial m (leadingCoefficient ord f / leadingCoefficient ord g)) m =
+      change CMvPolynomial.coefficientOf
+          (CMvPolynomial.ofMonomial m (leadingCoefficient ord f / leadingCoefficient ord g)) m =
         leadingCoefficient ord f / leadingCoefficient ord g
-      simp [MvPolynomial.ofMonomial]
+      simp [CMvPolynomial.ofMonomial]
     calc
       leadingCoefficient ord (c * g)
           = (c * g).coefficientOf in[ord](c * g) := rfl
       _ = (c * g).coefficientOf (in[ord](c) + in[ord](g)) := by
-            simp [MvPolynomial.coefficientOf, leadingMonomial_mul ord c g hc0 hg]
+            simp [CMvPolynomial.coefficientOf, leadingMonomial_mul ord c g hc0 hg]
       _ = c.coefficientOf in[ord](c) * g.coefficientOf in[ord](g) := hcoeff_top
       _ = (leadingCoefficient ord f / leadingCoefficient ord g) * leadingCoefficient ord g := by
         rw [hc_eval]
@@ -321,14 +321,14 @@ lemma mvDivide_decreases_some_branch (f g : MvPolynomial σ R) (hf : f ≠ 0) (h
 
 set_option linter.unusedVariables false in
 /-- The division algorithm for multivariate polynomials. -/
-def mvDivide (f g : MvPolynomial σ R) (hg : g ≠ 0) : MvPolynomial σ R × MvPolynomial σ R :=
+def mvDivide (f g : CMvPolynomial σ R) (hg : g ≠ 0) : CMvPolynomial σ R × CMvPolynomial σ R :=
   if hf : f = 0 then
     (0, 0)
   else
-    match hm : Monomial.divide in[ord](f) in[ord](g) with
+    match hm : CMonomial.divide in[ord](f) in[ord](g) with
     | some m =>
       -- The leading term is divisible, so we can eliminate it.
-      let c      := MvPolynomial.ofMonomial m (f.leadingCoefficient ord / g.leadingCoefficient ord)
+      let c      := CMvPolynomial.ofMonomial m (f.leadingCoefficient ord / g.leadingCoefficient ord)
       let ⟨q, r⟩ := mvDivide (f - c * g) g hg
       (c + q, r)
     | none =>
@@ -342,29 +342,29 @@ decreasing_by
   · simpa using mvDivide_decreases_none_branch ord f g hf hm
 
 /-- Single-step unfolding of `mvDivide` in the reducing (`some`) branch. -/
-private lemma mvDivide_br_reducing (f g : MvPolynomial σ R) (hg : g ≠ 0) (hf : f ≠ 0)
-    (m : Monomial σ) (hm : Monomial.divide in[ord](f) in[ord](g) = some m)
-    (c q r : MvPolynomial σ R)
-    (hc : c = MvPolynomial.ofMonomial m (f.leadingCoefficient ord / g.leadingCoefficient ord))
+private lemma mvDivide_br_reducing (f g : CMvPolynomial σ R) (hg : g ≠ 0) (hf : f ≠ 0)
+    (m : CMonomial σ) (hm : CMonomial.divide in[ord](f) in[ord](g) = some m)
+    (c q r : CMvPolynomial σ R)
+    (hc : c = CMvPolynomial.ofMonomial m (f.leadingCoefficient ord / g.leadingCoefficient ord))
     (hqr : mvDivide ord (f - c * g) g hg = (q, r)) :
     mvDivide ord f g hg = (c + q, r) := by
   rw [mvDivide.eq_def]; aesop
 
 /-- Single-step unfolding of `mvDivide` in the accumulating (`none`) branch. -/
-private lemma mvDivide_br_accumulating (f g : MvPolynomial σ R) (hg : g ≠ 0) (hf : f ≠ 0)
-    (hm : Monomial.divide in[ord](f) in[ord](g) = none)
-    (lt_f q r : MvPolynomial σ R) (hlt_f : lt_f = leadingTerm ord f)
+private lemma mvDivide_br_accumulating (f g : CMvPolynomial σ R) (hg : g ≠ 0) (hf : f ≠ 0)
+    (hm : CMonomial.divide in[ord](f) in[ord](g) = none)
+    (lt_f q r : CMvPolynomial σ R) (hlt_f : lt_f = leadingTerm ord f)
     (hqr : mvDivide ord (f - lt_f) g hg = (q, r)) :
     mvDivide ord f g hg = (q, r + lt_f) := by
   rw [mvDivide.eq_def]; aesop
 
 /-- The results of `mvDivide` satisfy the division relation and remainder constraints. -/
-theorem mvDivide.correct (f g : MvPolynomial σ R) (hg : g ≠ 0) :
+theorem mvDivide.correct (f g : CMvPolynomial σ R) (hg : g ≠ 0) :
     let (q, r) := mvDivide ord f g hg
     IsMvQuotientRemainder ord f g q r := by
   -- [TO-REVIEW]
   classical
-  let motive : MvPolynomial σ R → Prop := fun x =>
+  let motive : CMvPolynomial σ R → Prop := fun x =>
     let (q, r) := mvDivide ord x g hg
     IsMvQuotientRemainder ord x g q r
   have hmain : ∀ x, motive x := by
@@ -394,8 +394,8 @@ theorem mvDivide.correct (f g : MvPolynomial σ R) (hg : g ≠ 0) :
       have hxmem : in[ord](x) ∈ x.support := leadingMonomial_mem_support ord x hx0
       have hxc : leadingCoefficient ord x ≠ 0 := (mem_support_iff x in[ord](x)).1 hxmem
       have hltf_eq : lt_f = leadingTerm ord x := rfl
-      have hndiv : ¬ Monomial.divides? in[ord](g) in[ord](x) := by
-        exact (Monomial.notDivide_eq_iff).2 hm
+      have hndiv : ¬ CMonomial.divides? in[ord](g) in[ord](x) := by
+        exact (CMonomial.notDivide_eq_iff).2 hm
       have hthis : IsMvQuotientRemainder ord x g q (r + lt_f) := by
         refine ⟨?_, ?_⟩
         · calc
@@ -412,7 +412,7 @@ theorem mvDivide.correct (f g : MvPolynomial σ R) (hg : g ≠ 0) :
               simpa [leadingCoefficient] using
                 support_ofMonomial (m := in[ord](x)) (a := leadingCoefficient ord x) hxc
             have hn_eq : n = in[ord](x) := by
-              have : n ∈ ({in[ord](x)} : Finset (Monomial σ)) := by
+              have : n ∈ ({in[ord](x)} : Finset (CMonomial σ)) := by
                 simpa [hsupp_lt] using hlt
               simpa using Finset.mem_singleton.mp this
             simpa [hn_eq] using hndiv
@@ -422,7 +422,7 @@ theorem mvDivide.correct (f g : MvPolynomial σ R) (hg : g ≠ 0) :
   simpa [motive] using hmain f
 
 /-- The quotient and remainder of multivariate polynomial division is uniquely determined. -/
-theorem mvDivide.unique {f g q₁ q₂ r₁ r₂ : MvPolynomial σ R} (hg : g ≠ 0)
+theorem mvDivide.unique {f g q₁ q₂ r₁ r₂ : CMvPolynomial σ R} (hg : g ≠ 0)
     (h₁ : IsMvQuotientRemainder ord f g q₁ r₁) (h₂ : IsMvQuotientRemainder ord f g q₂ r₂) :
     q₁ = q₂ ∧ r₁ = r₂ := by
   -- Unfold `IsMvQuotientRemainder` to obtain that `g * (q₁ - q₂) = r₂ - r₁`.
@@ -448,7 +448,7 @@ theorem mvDivide.unique {f g q₁ q₂ r₁ r₂ : MvPolynomial σ R} (hg : g �
     -- We need to bring `NoZeroDivisors` into the context here, because the `noZeroDivisors`
     -- construction requires a monomial order. (FIXME: Use the fact that at least one monomial order
     -- exists, i.e. `lex`, to eliminate this?)
-    haveI : NoZeroDivisors (MvPolynomial σ R) := noZeroDivisors ord
+    haveI : NoZeroDivisors (CMvPolynomial σ R) := noZeroDivisors ord
     aesop
   have hmem : in[ord](r₂ - r₁) ∈ r₁.support ∪ r₂.support := by
     have hmem' : in[ord](r₂ - r₁) ∈ r₂.support ∪ r₁.support :=
@@ -457,11 +457,11 @@ theorem mvDivide.unique {f g q₁ q₂ r₁ r₂ : MvPolynomial σ R} (hg : g �
     simpa [Finset.union_comm] using hmem'
   -- In either case, it follows that `g` divides either `r₁` or `r₂`, contradicting the property of
   -- the remainder.
-  have hdiv : Monomial.divides? in[ord](g) in[ord](r₂ - r₁) := by
-    rw [hin, Monomial.divides?_iff]
+  have hdiv : CMonomial.divides? in[ord](g) in[ord](r₂ - r₁) := by
+    rw [hin, CMonomial.divides?_iff]
     intro i; exact Nat.le_add_right (in[ord](g) i) (in[ord](q₁ - q₂) i)
   rcases Finset.mem_union.mp hmem with hr₁ | hr₂
   · exact (h₁.2 _ hr₁) hdiv
   · exact (h₂.2 _ hr₂) hdiv
 
-end MvPolynomial
+end CMvPolynomial
