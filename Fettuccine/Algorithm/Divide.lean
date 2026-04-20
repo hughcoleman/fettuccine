@@ -56,7 +56,7 @@ where
     Id.run do
       for i in [:gs.size] do
         let g := gs[i]!
-        match g.leadingTerm with
+        match g.leadingTerm ord with
         | none => pure PUnit.unit
         | some (lm_g, lc_g) =>
           match FMonomial.divide lm_f lm_g with
@@ -68,19 +68,19 @@ where
       → Array (FMvPolynomial n R) × FMvPolynomial n R
     | 0, _, qs, r => (qs, r)
     | fuel + 1, f, qs, r =>
-      match f.leadingTerm with
+      match f.leadingTerm ord with
       | none              => (qs, r)
       | some (lm_f, lc_f) =>
         let lt := #[(lm_f, lc_f)]
         match findDivisor lm_f with
         | none =>
           -- No divisor, so move the leading term over to the accumulator.
-          loop fuel (sub ord f lt) qs (add ord r lt)
+          loop fuel (sub f lt) qs (add r lt)
         | some (i, g, lc_g, m) =>
           -- Subtract off a suitable multiple of the divisor to eliminate the leading term.
           let c   := lc_f / lc_g
-          let f'  := sub ord f (mulMonomial ord m c g)
-          let qs' := qs.set! i (add ord qs[i]! #[(m, c)])
+          let f'  := sub f (mulMonomial m c g)
+          let qs' := qs.set! i (add qs[i]! #[(m, c)])
           loop fuel f' qs' r
 
 /-- Divide `f` by a single divisor `g`. -/

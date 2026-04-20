@@ -15,8 +15,8 @@ representations of monomials (`CMonomial σ`) and multivariate polynomials (`CMv
 - `FMvPolynomial.C a` : the constant polynomial with value `a`.
 -/
 
-/-- A monomial on `n` variables is represented as an array of exponents alongside a proof that it is
-    of the expected length. -/
+/-- A monomial on `n` variables is represented as an array of exponents (alongside a proof that it
+    is of the intended length). -/
 structure FMonomial (n : ℕ) where
   data : Array ℕ
   hsize : data.size = n
@@ -26,38 +26,50 @@ namespace FMonomial
 
 variable {n : ℕ}
 
-@[simp] theorem size_data (m : FMonomial n) : m.data.size = n := m.hsize
+@[simp] theorem size_data (m : FMonomial n) : m.data.size = n :=
+  m.hsize
 
 /-- Convert a monomial to its exponent list. -/
 def toList (m : FMonomial n) : List ℕ := m.data.toList
 
 /-- The zero monomial on `n` variables. -/
 def zero (n : ℕ) : FMonomial n where
-  data := Array.replicate n 0
+  data  := Array.replicate n 0
   hsize := by simp
 
 /-- The monomial `xᵢ`: exponent 1 at position `i`, 0 elsewhere. -/
 def X (i : Fin n) : FMonomial n where
-  data := Array.ofFn (fun j : Fin n => if j = i then 1 else 0)
+  data  := Array.ofFn (fun i' : Fin n => if i' = i then 1 else 0)
   hsize := by simp
 
-/-- The degree of a monomial. -/
+/-- The degree of a monomial, which is the sum of the degrees in each variable. -/
 def degree (m : FMonomial n) : ℕ := m.data.foldl (· + ·) 0
 
-/-- The product of two monomials (component-wise addition of exponents). -/
+/-- The product of two monomials (componentwise addition of exponents). -/
 def add (m₁ m₂ : FMonomial n) : FMonomial n where
-  data := Array.zipWith (· + ·) m₁.data m₂.data
+  data  := Array.zipWith (· + ·) m₁.data m₂.data
   hsize := by simp [m₁.hsize, m₂.hsize]
 
-/-- The lowest common multiple of two monomials (component-wise maximum of exponents). -/
+/-- The lowest common multiple of two monomials (componentwise maximum of exponents). -/
 def lcm (m₁ m₂ : FMonomial n) : FMonomial n where
-  data := Array.zipWith max m₁.data m₂.data
+  data  := Array.zipWith max m₁.data m₂.data
   hsize := by simp [m₁.hsize, m₂.hsize]
+
+/-- Two monomials are said to be **relatively prime** if they share no common variables with
+    positive exponents. -/
+def relativelyPrime? (m₁ m₂ : FMonomial n) : Bool :=
+  Id.run do
+    for i in [:n] do
+      let a := m₁.data.getD i 0
+      let b := m₂.data.getD i 0
+      if !(a == 0 || b == 0) then
+        return false
+    return true
 
 end FMonomial
 
-/-- A multivariate polynomial, represented as an array of monomial-coefficient pairs, stored sorted
-    according to a (fixed, implicit) monomial order. -/
+/-- A multivariate polynomial, represented as an array of monomial-coefficient pairs. Terms are not
+    stored in any particular order, but will generally be assumed to be irredundant. -/
 abbrev FMvPolynomial (n : ℕ) (R : Type*) := Array (FMonomial n × R)
 
 namespace FMvPolynomial

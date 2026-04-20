@@ -13,7 +13,7 @@ type `FMonomial n → FMonomial n → Ordering`.
 * `FMonomialOrder.grevlex` - the graded reverse lexicographic order on `FMonomial`.
 -/
 
-abbrev FMonomialOrder {n : ℕ} := FMonomial n → FMonomial n → Ordering
+abbrev FMonomialOrder (n : ℕ) := FMonomial n → FMonomial n → Ordering
 
 namespace FMonomialOrder
 
@@ -54,60 +54,80 @@ namespace FMvPolynomial
 variable {n : ℕ}
 variable {R : Type*}
 
-/-- The leading term of a polynomial, if it exists. -/
-def leadingTerm (f : FMvPolynomial n R) : Option (FMonomial n × R) :=
-  -- Since we're storing the terms of the polynomial in decreasing order with respect to the
-  -- implicit order, the leading term is just the first entry (if it exists).
-  f[0]?
+section LeadingMonomial
 
-/-- The leading monomial of a polynomial, if it exists. -/
-def leadingMonomial (f : FMvPolynomial n R) : Option (FMonomial n) :=
-  f.leadingTerm.map Prod.fst
+variable (f : FMvPolynomial n R)
 
-/-- The leading coefficient of a polynomial, if it exists. -/
-def leadingCoefficient (f : FMvPolynomial n R) : Option R :=
-  f.leadingTerm.map Prod.snd
+/-- The leading term of `f` with respect to a monomial order `ord`, if it exists. -/
+def leadingTerm (ord : FMonomialOrder n) : Option (FMonomial n × R) :=
+  -- WARNING: This relies on the fact that there are no duplicate or otherwise redundant terms in
+  -- the expression of `f`.
+  f.foldl (init := none) fun lt (m, c) =>
+    match lt with
+    | none          => some (m, c)
+    | some (m', c') =>
+      if ord m m' == .gt then some (m, c) else some (m', c')
+
+/-- The leading monomial of `f` with respect to `ord`, if it exists. -/
+def leadingMonomial (ord : FMonomialOrder n) : Option (FMonomial n) :=
+  (f.leadingTerm ord).map Prod.fst
+
+/-- The leading coefficient of `f` with respect to `ord`, if it exists. -/
+def leadingCoefficient (ord : FMonomialOrder n) : Option R :=
+  (f.leadingTerm ord).map Prod.snd
+
+end LeadingMonomial
 
 variable [DecidableEq R] [Zero R] [AddMonoid R]
-variable (ord : FMonomialOrder)
 
-/-- Normalize a polynomial with respect to a given monomial order. -/
+/-- Normalize a polynomial with respect to lexicographic order. -/
 def normalize (f : FMvPolynomial n R) : FMvPolynomial n R :=
-  merge (f.qsort fun (m₁, _) (m₂, _) => ord m₁ m₂ == .gt)
+  merge (f.qsort fun (m₁, _) (m₂, _) => FMonomialOrder.lex m₁ m₂ == .gt)
 where
   merge f := f.foldl (init := #[]) fun acc (m, c) =>
     match acc.back? with
     | some (m', c') =>
-        if m = m' then
-          let c₀ := c' + c
-          if c₀ = (0 : R) then acc.pop
-          else
-            acc.set! (acc.size - 1) (m', c₀)
+      if m = m' then
+        let c₀ := c' + c
+        if c₀ = (0 : R) then acc.pop
         else
-          if c = (0 : R) then acc
-          else
-            acc.push (m, c)
-    | none =>
+          acc.set! (acc.size - 1) (m', c₀)
+      else
         if c = (0 : R) then acc
         else
           acc.push (m, c)
+    | none =>
+      if c = (0 : R) then acc
+      else
+        acc.push (m, c)
 
-/-- Add two multivariate polynomials. -/
+/-- Add two multivariate polynomials and re-normalize lexicographically. -/
 def add (f g : FMvPolynomial n R) : FMvPolynomial n R :=
-  -- FIXME: This could be optimized by zipper-merging the two sorted arrays instead of concatenating
-  --   and renormalizing.
-  normalize ord (f ++ g)
+  normalize (f ++ g)
 
 /-- Subtract a multivariate polynomial from another. -/
 def sub [AddGroup R] (f g : FMvPolynomial n R) : FMvPolynomial n R :=
-  add ord f (g.map fun (m, c) => (m, -c))
+  add f (g.map fun (m, c) => (m, -c))
 
-/-- Multiply a multivariate polynomial by a monomial. -/
-def mulMonomial [Mul R] (m : FMonomial n) (c : R) (f : FMvPolynomial n R) : FMvPolynomial n R :=
-  normalize ord (f.map fun (m', c') => (FMonomial.add m m', c * c'))
+/-- Multiply a polynomial by a monomial term and re-normalize lexicographically. -/
+def mulMonomial [Mul R] (m : FMonomial n) (c : R)
+    (f : FMvPolynomial n R) : FMvPolynomial n R :=
+  normalize (f.map fun (m', c') => (FMonomial.add m m', c * c'))
 
-/-- Multiply two multivariate polynomials. -/
+/-- Multiply two multivariate polynomials and re-normalize lexicographically. -/
 def mul [Mul R] (f g : FMvPolynomial n R) : FMvPolynomial n R :=
-  f.foldl (init := #[]) fun acc (m, c) => add ord acc (mulMonomial ord m c g)
+  f.foldl (init := #[]) fun acc (m, c) => add acc (mulMonomial m c g)
+
+/-- Equality after lexicographic normalization. -/
+def equal? (f g : FMvPolynomial n R) : Prop :=
+  normalize f = normalize g
+
+instance decidableEqual? (f g : FMvPolynomial n R) : Decidable (equal? f g) := by
+  unfold equal?
+  infer_instance
+
+/-- Boolean test for equality after lexicographic normalization. -/
+def decideEqual? (f g : FMvPolynomial n R) : Bool :=
+  decide (equal? f g)
 
 end FMvPolynomial
