@@ -12,8 +12,9 @@ open FMvPolynomial FMonomialOrder FMonomial
 -- All of these examples will be over ℚ[x, y, z], with x > y > z.
 abbrev S := FMvPolynomial 3 Rat
 
-def m (x y z : ℕ) : FMonomial 3 :=
-  { data := #[x, y, z], hsize := by simp }
+-- Helper for the monomial-order comparison examples below
+def m (a b c : ℕ) : FMonomial 3 :=
+  { data := #[a, b, c], hsize := by simp }
 
 section
 -- ### Example: Monomial Orders
@@ -30,11 +31,15 @@ section
 #eval grevlex (m 2 0 0) (m 0 2 0)  -- .gt (x² > y² under grevlex)
 end
 
+def x : S := .X 0
+def y : S := .X 1
+def z : S := .X 2
+
 section
 -- ### Example 1: I = (xy - 1, x² - y)
 
-def f₁ : S := #[(m 1 1 0, 1), (m 0 0 0, -1)] -- xy - 1
-def f₂ : S := #[(m 2 0 0, 1), (m 0 1 0, -1)] -- x² - y
+def f₁ : S := x * y - 1
+def f₂ : S := x ^ 2 - y
 
 #eval (buchberger'     lex #[f₁, f₂]).map (·.map fun (m, c) => (m.toList, c))
 #eval (buchberger'   grlex #[f₁, f₂]).map (·.map fun (m, c) => (m.toList, c))
@@ -58,14 +63,13 @@ end
 section
 -- ### Example 2: I = (xy - z, xz - y, yz - x)
 
-def g₁ : S := #[(m 1 1 0, 1), (m 0 0 1, -1)] -- xy - z
-def g₂ : S := #[(m 1 0 1, 1), (m 0 1 0, -1)] -- xz - y
-def g₃ : S := #[(m 0 1 1, 1), (m 1 0 0, -1)] -- yz - x
+def g₁ : S := x * y - z
+def g₂ : S := x * z - y
+def g₃ : S := y * z - x
 
 #eval (buchberger'     lex #[g₁, g₂, g₃]).map (·.map fun (m, c) => (m.toList, c))
 #eval (buchberger'   grlex #[g₁, g₂, g₃]).map (·.map fun (m, c) => (m.toList, c))
 #eval (buchberger' grevlex #[g₁, g₂, g₃]).map (·.map fun (m, c) => (m.toList, c))
-
 
 end
 

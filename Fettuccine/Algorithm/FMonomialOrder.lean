@@ -130,4 +130,25 @@ instance decidableEqual? (f g : FMvPolynomial n R) : Decidable (equal? f g) := b
 def decideEqual? (f g : FMvPolynomial n R) : Bool :=
   decide (equal? f g)
 
+instance instNeg [Neg R] : Neg (FMvPolynomial n R) :=
+  ⟨fun f => f.map fun (m, c) => (m, -c)⟩
+
+instance instAdd [AddMonoid R] : Add (FMvPolynomial n R) :=
+  ⟨add⟩
+
+instance instSub [AddGroup R] : Sub (FMvPolynomial n R) :=
+  ⟨sub⟩
+
+instance instMul [Mul R] : Mul (FMvPolynomial n R) :=
+  ⟨mul⟩
+
+instance instHPow [One R] [Mul R] :
+    HPow (FMvPolynomial n R) ℕ (FMvPolynomial n R) :=
+  ⟨fun f k => Nat.rec #[(FMonomial.zero n, (1 : R))] (fun _ p => mul p f) k⟩
+
+/-- Embed a numeric literal `k` as the constant polynomial `C k`. -/
+instance instOfNat {k : ℕ} [OfNat R k] :
+    OfNat (FMvPolynomial n R) k :=
+  ⟨C (OfNat.ofNat k)⟩
+
 end FMvPolynomial
