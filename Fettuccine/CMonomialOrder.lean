@@ -378,7 +378,7 @@ lemma supportSorted_eq_nil_iff_support_eq_empty (f : CMvPolynomial σ R) :
   rw [supportSorted_eq_nil_iff_zero, DFinsupp.support_eq_empty]
   rfl
 
-/-- A computation-friendly leading monomial, defined as the last element of the sorted support. -/
+/-- An equivalent definition of the leading monomial, which is more amenable to computation. -/
 @[inline] def leadingMonomial' (f : CMvPolynomial σ R) : CMonomial σ :=
   (supportSorted ord f).getLast?.getD 0
 
@@ -459,11 +459,9 @@ namespace CMonomialOrder
 universe u v
 
 /-- A type-level tag for a computable monomial order. -/
--- This allows monomial orders to be passed implicitly, via typeclass inference.
---
--- Admittedly, this is a relic of when we thought that the cause of Lean's segfaults had something
--- to do with the fact that our procedures were not being monomorphized over the monomial order
--- `ord`. (This is proven to be wrong; hard-coding the order still fails.)
+-- Passing a `CMonomialOrder` as a value-level argument causes unpredictable segfaults. By
+-- introducing a type-level "tag" for monomial orders, we can make computations generic over the
+-- tag, enabling specialization for concrete orders.
 class MonomialOrderTag (tag : Type v) (σ : Type u) [DecidableEq σ] where
   ord : CMonomialOrder.{u, u} σ
 
