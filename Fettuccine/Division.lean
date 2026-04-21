@@ -114,41 +114,6 @@ local notation "ord" => taggedOrder (tag := tag) (σ := σ)
 def IsMvQuotientRemainder (f g q r : CMvPolynomial σ R) : Prop :=
   f = g * q + r ∧ (∀ m ∈ r.support, ¬ in[ord](g) ∣ m)
 
-/-- The support of a difference of two polynomials is contained in the union of the supports of both
-    summands. -/
-lemma support_sub_subset (f g : CMvPolynomial σ R) : (f - g).support ⊆ f.support ∪ g.support := by
-  -- For some reason this needs to be made explicit; `DFinsupp.support_neg` doesn't match. Possibly
-  -- because of variable names?
-  have hneg : (-g).support = g.support :=
-    DFinsupp.support_neg (f := g)
-  simpa [sub_eq_add_neg, hneg] using support_add_subset f (-g)
-
-set_option linter.unusedDecidableInType false in
-/-- If `R` is a domain, then a polynomial ring over `R` is also a domain. -/
--- Despite the statement, this instance "technically" depends on the underlying choice of monomial
--- order. It would be nice to eliminate this somehow?
-@[reducible] def noZeroDivisors : NoZeroDivisors (CMvPolynomial σ R) where
-  eq_zero_or_eq_zero_of_mul_eq_zero := by
-    intro a b h
-    -- We can assume a ≠ 0 and b ≠ 0, because otherwise the conclusion is trivial.
-    by_cases ha : a = 0
-    · exact Or.inl ha
-    by_cases hb : b = 0
-    · exact Or.inr hb
-    -- Proceed by contradiction. In a nutshell, we're arguing that the leading term of `a * b` is
-    -- the product of the leading terms of `a` and `b`, and so we can pass to the fact that `R` is
-    -- a domain.
-    exfalso
-    have hzero : a.leadingCoefficient ord * b.leadingCoefficient ord = 0 := by
-      calc
-        a.leadingCoefficient ord * b.leadingCoefficient ord
-        _ = (a * b).coefficientOf (in[ord](a) + in[ord](b))
-              := by exact (leadingCoefficient_mul ord a b ha hb).symm
-        _ = 0 := by simp [h]
-    exact (mul_ne_zero
-      (CMvPolynomial.leadingCoefficient_ne_zero ord a ha)
-      (CMvPolynomial.leadingCoefficient_ne_zero ord b hb)) hzero
-
 -- Instantiate instances of `LinearOrder` and `WellFoundedRelation` on `ord.syn` so that the
 -- termination measure for `mvDivide` is interpreted correctly.
 local instance : LinearOrder (taggedOrder (tag := tag) (σ := σ)).syn :=
@@ -493,9 +458,8 @@ theorem mvDivide_unique {f g q₁ q₂ r₁ r₂ : CMvPolynomial σ R} (hg : g �
   -- `in(r₂ - r₁)` lies in the support of either `r₁` or `r₂`.
   have hr0 : r₂ - r₁ ≠ 0 := by
     -- We need to bring `NoZeroDivisors` into the context here, because the `noZeroDivisors`
-    -- construction requires a monomial order. (FIXME: Use the fact that at least one monomial order
-    -- exists, i.e. `lex`, to eliminate this?)
-    haveI : NoZeroDivisors (CMvPolynomial σ R) := noZeroDivisors (tag := tag)
+    -- construction requires a monomial order.
+    haveI : NoZeroDivisors (CMvPolynomial σ R) := CMvPolynomial.noZeroDivisorsOfMonomialOrder ord
     aesop
   have hmem : in[ord](r₂ - r₁) ∈ r₁.support ∪ r₂.support := by
     have hmem' : in[ord](r₂ - r₁) ∈ r₂.support ∪ r₁.support :=

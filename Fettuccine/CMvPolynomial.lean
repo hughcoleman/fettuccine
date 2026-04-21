@@ -94,7 +94,7 @@ abbrev CMvPolynomial (σ : Type*) [DecidableEq σ] (R : Type*) [CommSemiring R] 
 namespace CMvPolynomial
 
 variable {σ : Type*} [DecidableEq σ]
-variable {R : Type*} [CommSemiring R]
+variable {R : Type*} [DecidableEq R] [CommSemiring R]
 
 /-- The variable `xᵢ` as a polynomial. -/
 def X (i : σ) : CMvPolynomial σ R :=
@@ -111,8 +111,6 @@ def ofMonomial (m : CMonomial σ) (a : R) : CMvPolynomial σ R :=
 /-- The coefficient of monomial `m` in polynomial `f`. -/
 @[simp] def coefficientOf (f : CMvPolynomial σ R) (m : CMonomial σ) : R :=
   f m
-
-variable [DecidableEq R]
 
 /-- The support of a monomial polynomial is singleton. -/
 lemma support_ofMonomial (m : CMonomial σ) (a : R) (ha : a ≠ 0) :
@@ -136,8 +134,7 @@ lemma support_ofMonomial (m : CMonomial σ) (a : R) (ha : a ≠ 0) :
 
 /-- The support of a sum of two polynomials is contained in the union of the supports of the
     summands. -/
-lemma support_add_subset (f g : CMvPolynomial σ R) :
-    (f + g).support ⊆ f.support ∪ g.support := by
+lemma support_add_subset (f g : CMvPolynomial σ R) : (f + g).support ⊆ f.support ∪ g.support := by
   exact DFinsupp.support_add
 
 /-- The support of a product two of polynomials is contained in the "Cartesian" product of the
@@ -198,5 +195,21 @@ instance [Nontrivial R] : Nontrivial (CMvPolynomial σ R) where
     exact h <| by
       simpa [CMvPolynomial.C, CMvPolynomial.coefficientOf] using
         congrArg (fun p : CMvPolynomial σ R => p.coefficientOf 0) hC
+
+end CMvPolynomial
+
+namespace CMvPolynomial
+
+variable {σ : Type*} [DecidableEq σ]
+variable {R : Type*} [DecidableEq R] [CommRing R]
+
+/-- The support of a difference of two polynomials is contained in the union of the supports of both
+    summands. -/
+lemma support_sub_subset (f g : CMvPolynomial σ R) : (f - g).support ⊆ f.support ∪ g.support := by
+  -- For some reason this needs to be made explicit; `DFinsupp.support_neg` doesn't match. Possibly
+  -- because of variable names?
+  have hneg : (-g).support = g.support :=
+    DFinsupp.support_neg (f := g)
+  simpa [sub_eq_add_neg, hneg] using support_add_subset f (-g)
 
 end CMvPolynomial

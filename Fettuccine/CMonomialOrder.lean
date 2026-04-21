@@ -476,3 +476,47 @@ instance lexOrderTag {σ : Type*} [DecidableEq σ] [LinearOrder σ] [WellFounded
   ord := lex
 
 end CMonomialOrder
+
+namespace CMvPolynomial
+
+variable {σ : Type*} [DecidableEq σ]
+variable {R : Type*} [DecidableEq R] [CommRing R]
+
+open CMonomialOrder
+
+set_option linter.unusedDecidableInType false in
+/-- If `R` is a domain, then a polynomial ring over `R` is also a domain. -/
+-- This proof requires a monomial order to be supplied, because it relies on the fact that the
+-- leading term of a product is the product of the leading terms. Unfortunately, Lean isn't able to
+-- see that this doesn't depend on the concrete choice of order.
+@[reducible] def noZeroDivisorsOfMonomialOrder (ord : CMonomialOrder σ) [NoZeroDivisors R] :
+    NoZeroDivisors (CMvPolynomial σ R) where
+  eq_zero_or_eq_zero_of_mul_eq_zero := by
+    intro a b h
+    -- We can assume a ≠ 0 and b ≠ 0, because otherwise the conclusion is trivial.
+    by_cases ha : a = 0
+    · exact Or.inl ha
+    by_cases hb : b = 0
+    · exact Or.inr hb
+    -- Proceed by contradiction. In a nutshell, we're arguing that the leading term of `a * b` is
+    -- the product of the leading terms of `a` and `b`, and so we can pass to the fact that `R` is
+    -- a domain.
+    exfalso
+    have hzero : a.leadingCoefficient ord * b.leadingCoefficient ord = 0 := by
+      calc
+        a.leadingCoefficient ord * b.leadingCoefficient ord
+        _ = (a * b).coefficientOf (in[ord](a) + in[ord](b))
+              := by exact (leadingCoefficient_mul ord a b ha hb).symm
+        _ = 0 := by simp [h]
+    exact (mul_ne_zero
+      (CMvPolynomial.leadingCoefficient_ne_zero ord a ha)
+      (CMvPolynomial.leadingCoefficient_ne_zero ord b hb)) hzero
+
+variable [LinearOrder σ] [WellFoundedGT σ]
+
+set_option linter.unusedDecidableInType false in
+/-- If `R` is a domain, then a polynomial ring over `R` is also a domain. -/
+instance noZeroDivisors [NoZeroDivisors R] : NoZeroDivisors (CMvPolynomial σ R) :=
+  noZeroDivisorsOfMonomialOrder lex
+
+end CMvPolynomial
