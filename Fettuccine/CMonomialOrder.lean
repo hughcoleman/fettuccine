@@ -1,6 +1,7 @@
 import Fettuccine.CMvPolynomial
 import Mathlib.Algebra.DirectSum.Internal
 import Mathlib.Data.DFinsupp.WellFounded
+import Mathlib.Data.Finset.Sort
 
 /-!
 # CMonomial Orders
@@ -73,7 +74,7 @@ lemma zero_le' (m : ord.syn) : 0 ≤ m := by
 -- An instance of `OrderBot`; needed to take a supremum over finite sets of monomials (in the
 -- definition of `leadingMonomial`.)
 instance : OrderBot ord.syn where
-  bot := 0
+  bot    := 0
   bot_le := ord.zero_le'
 
 lemma zero_le (m : CMonomial σ) : 0 ≼[ord] m := by
@@ -148,9 +149,8 @@ namespace CMvPolynomial
 /-- The **leading monomial** of a polynomial `f` with respect to a monomial order `ord`. -/
 -- The `@[inline]` annotation is necessary: otherwise, Lean unpredictably segfaults when it is
 -- asked to evaluate this against the `grlex` or `grevlex` orders (but not the `lex` order,
--- strangely). According to the Agent that spent several hours experimenting, it has something to
--- do with how Lean is forced to funnel through `CMonomialOrder` when it is asked to evaluate `<`
--- against a "generic" order. For details, see `MonomialOrderTag` below.
+-- strangely). Seemingly this has to do with how Lean optimizes the evaluation of this definition,
+-- but it's difficult to say.
 @[inline] def leadingMonomial (f : CMvPolynomial σ R) : CMonomial σ :=
   ord.toSyn.symm (f.support.sup ord.toSyn)
 
@@ -293,7 +293,7 @@ lemma leadingCoefficient_mul (f g : CMvPolynomial σ R) (hf : f ≠ 0) (hg : g �
           refine ord.eq_of_add_eq_of_le ?_ ?_ hsum'
           · exact le_leadingMonomial ord f i (by aesop)
           · exact le_leadingMonomial ord g j (by aesop)
-        -- Contradiction, (i₀, j₀) is not equal to itself.
+        -- Contradiction; we get that (i₀, j₀) is not equal to itself.
         rcases hij_eq with ⟨rfl, rfl⟩
         exact (hij_neq rfl).elim
       · simp [hsum]
@@ -330,6 +330,126 @@ lemma leadingMonomial_mul [NoZeroDivisors R] (f g : CMvPolynomial σ R) (hf : f 
     · exact le_leadingMonomial ord _ _ hn_mem_supp
   exact ord.toSyn.injective heq
 
+/-- The **sorted support** of a multivariate polynomial, according to a given monomial order. -/
+@[inline] def supportSorted (f : CMvPolynomial σ R) : List (CMonomial σ) :=
+  let rel : CMonomial σ → CMonomial σ → Prop :=
+    fun m₁ m₂ => ord.toSyn m₁ ≤ ord.toSyn m₂
+  letI : Std.Total rel :=
+    ⟨fun x y => le_total (ord.toSyn x) (ord.toSyn y)⟩
+  letI : Std.Antisymm rel :=
+    ⟨fun _ _ hxy hyx => ord.toSyn.injective (le_antisymm hxy hyx)⟩
+  letI : IsTrans (CMonomial σ) rel :=
+    ⟨fun _ _ _ hxy hyz => le_trans hxy hyz⟩
+  f.support.sort rel
+
+/-- The sorted support of a multivariate polynomial is nil if and only if the polynomial is zero. -/
+lemma supportSorted_eq_nil_iff_zero (f : CMvPolynomial σ R) :
+    supportSorted ord f = [] ↔ f = 0 := by
+  classical
+  -- Establish the relation and its structure.
+  let rel : CMonomial σ → CMonomial σ → Prop :=
+    fun m₁ m₂ => ord.toSyn m₁ ≤ ord.toSyn m₂
+  letI : Std.Total rel :=
+    ⟨fun x y => le_total (ord.toSyn x) (ord.toSyn y)⟩
+  letI : Std.Antisymm rel :=
+    ⟨fun _ _ hxy hyx => ord.toSyn.injective (le_antisymm hxy hyx)⟩
+  letI : IsTrans (CMonomial σ) rel :=
+    ⟨fun _ _ _ hxy hyz => le_trans hxy hyz⟩
+  constructor
+  · intro h
+    ext m
+    -- If the polynomial is not the zero polynomial, then there is a monomial whose coefficient
+    -- is non-zero. This monomial is in the support, and hence in the sorted support.
+    by_contra hm
+    have hm_support : m ∈ f.support :=
+      (mem_support_iff f m).mpr hm
+    have hm_ssupport : m ∈ supportSorted ord f := by
+      unfold supportSorted
+      apply (Finset.mem_sort (s := f.support) rel).mpr
+      assumption
+    simp [h] at hm_ssupport
+  -- The converse is much easier.
+  · intro h; simp [supportSorted, h]
+
+/-- The sorted support of a multivariate polynomial is empty if and only if the support of the
+    polynomial is the empty set. -/
+lemma supportSorted_eq_nil_iff_support_eq_empty (f : CMvPolynomial σ R) :
+    supportSorted ord f = [] ↔ f.support = ∅ := by
+  rw [supportSorted_eq_nil_iff_zero, DFinsupp.support_eq_empty]
+  rfl
+
+/-- A computation-friendly leading monomial, defined as the last element of the sorted support. -/
+@[inline] def leadingMonomial' (f : CMvPolynomial σ R) : CMonomial σ :=
+  (supportSorted ord f).getLast?.getD 0
+
+/-- The sorted-support leading monomial agrees with the `Finset.sup` definition. -/
+theorem leadingMonomial_eq_leadingMonomial' (f : CMvPolynomial σ R) :
+    leadingMonomial ord f = leadingMonomial' ord f := by
+  classical
+  -- Establish the relation and its structure.
+  let rel : CMonomial σ → CMonomial σ → Prop :=
+    fun m₁ m₂ => ord.toSyn m₁ ≤ ord.toSyn m₂
+  letI : Std.Total rel :=
+    ⟨fun x y => le_total (ord.toSyn x) (ord.toSyn y)⟩
+  letI : Std.Antisymm rel :=
+    ⟨fun _ _ hxy hyx => ord.toSyn.injective (le_antisymm hxy hyx)⟩
+  letI : IsTrans (CMonomial σ) rel :=
+    ⟨fun _ _ _ hxy hyz => le_trans hxy hyz⟩
+  -- If `supportSorted` is empty, then we know `f` has empty support, and so in both cases the
+  -- leading monomial is zero.
+  by_cases hl : supportSorted ord f = []
+  · have hsupp : f.support = ∅ := by
+      exact (supportSorted_eq_nil_iff_support_eq_empty ord f).mp hl
+    apply ord.toSyn.injective
+    simp [leadingMonomial, leadingMonomial', hl, hsupp]
+    rfl
+  -- Otherwise, we'll argue two inequalities (under toSyn), which can be pulled back by injectivity.
+  · have hsup_ge : ord.toSyn ((supportSorted ord f).getLast hl) ≤ f.support.sup ord.toSyn := by
+      have h : (supportSorted ord f).getLast hl ∈ f.support :=
+        (Finset.mem_sort fun m₁ m₂ ↦ ord.toSyn m₁ ≤ ord.toSyn m₂).mp (List.getLast_mem hl)
+      exact Finset.le_sup h
+    have hsup_le : f.support.sup ord.toSyn ≤ ord.toSyn ((supportSorted ord f).getLast hl) := by
+      refine Finset.sup_le ?_
+      intro m hm
+      have hm_ssupport : m ∈ supportSorted ord f := by
+        unfold supportSorted
+        apply (Finset.mem_sort (s := f.support) rel).mpr
+        assumption
+      -- Since `supportSorted` is sorted, the last element is an upper bound on all elements, which
+      -- is exactly what we are trying to prove.
+      have hrel : (supportSorted ord f).Pairwise rel := by
+        simp [supportSorted, rel]
+      exact hrel.rel_getLast hm_ssupport
+    -- Pulling these inequalities back along `ord.toSyn` provides the equality.
+    apply ord.toSyn.injective
+    calc
+      ord.toSyn (leadingMonomial ord f)
+      _ = f.support.sup ord.toSyn                      := by simp [leadingMonomial]
+      _ = ord.toSyn ((supportSorted ord f).getLast hl) := le_antisymm hsup_le hsup_ge
+      _ = ord.toSyn (leadingMonomial' ord f)           := by
+            simp [leadingMonomial', hl, List.getLast?_eq_getLast_of_ne_nil]
+
+/-- Notation for the leading monomial of a polynomial under a given monomial order. -/
+-- As above, the `max` priority is used so that this binds like function application.
+scoped notation:max "in'[" ord "](" f ")" =>
+  (CMvPolynomial.leadingMonomial' ord f)
+
+/-- The leading coefficient of a multivariate polynomial, computed via `leadingMonomial'`. -/
+@[inline] def leadingCoefficient' (f : CMvPolynomial σ R) : R :=
+  CMvPolynomial.coefficientOf f in'[ord](f)
+
+theorem leadingCoefficient_eq_leadingCoefficient' (f : CMvPolynomial σ R) :
+    leadingCoefficient ord f = leadingCoefficient' ord f := by
+  simp [leadingCoefficient, leadingCoefficient', leadingMonomial_eq_leadingMonomial' ord f]
+
+/-- The leading term of a multivariate polynomial, computed via `leadingMonomial'`. -/
+@[inline] def leadingTerm' (f : CMvPolynomial σ R) : CMvPolynomial σ R :=
+  CMvPolynomial.ofMonomial in'[ord](f) (leadingCoefficient' ord f)
+
+theorem leadingTerm_eq_leadingTerm' (f : CMvPolynomial σ R) :
+    leadingTerm ord f = leadingTerm' ord f := by
+  simp [leadingTerm, leadingTerm', leadingMonomial_eq_leadingMonomial' ord f, leadingCoefficient']
+
 end CMvPolynomial
 
 end LeadingMonomial
@@ -339,10 +459,11 @@ namespace CMonomialOrder
 universe u v
 
 /-- A type-level tag for a computable monomial order. -/
--- Passing a `CMonomialOrder` as a value-level argument causes issues with native evaluation, since
--- it forces the compiler to funnel computation through the projections of `CMonomialOrder`. This
--- can cause Lean to segfault. By introducing a type-level "tag" for monomial orders, we can make
--- computations generic over the tag, enabling specialization for concrete orders.
+-- This allows monomial orders to be passed implicitly, via typeclass inference.
+--
+-- Admittedly, this is a relic of when we thought that the cause of Lean's segfaults had something
+-- to do with the fact that our procedures were not being monomorphized over the monomial order
+-- `ord`. (This is proven to be wrong; hard-coding the order still fails.)
 class MonomialOrderTag (tag : Type v) (σ : Type u) [DecidableEq σ] where
   ord : CMonomialOrder.{u, u} σ
 

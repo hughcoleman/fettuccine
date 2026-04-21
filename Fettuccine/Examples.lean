@@ -138,6 +138,47 @@ def division₂ :=
 #eval division₂.1.withOrdering CMonomialOrder.lex
 #eval division₂.2.withOrdering CMonomialOrder.lex
 
+def division₂_grlex :=
+  CMvPolynomial.mvDivide (tag := CMonomialOrder.GrlexOrder) dividend₂ divisor divisor_ne_zero
+
+#eval division₂_grlex.1.withOrdering CMonomialOrder.grlex
+#eval division₂_grlex.2.withOrdering CMonomialOrder.grlex
+
+def division₂_grevlex :=
+  CMvPolynomial.mvDivide (tag := CMonomialOrder.GrevlexOrder) dividend₂ divisor divisor_ne_zero
+
+#eval division₂_grevlex.1.withOrdering CMonomialOrder.grevlex
+#eval division₂_grevlex.2.withOrdering CMonomialOrder.grevlex
+
+def divisor₃ : CMvPolynomial σ Rat := x + y^2
+
+set_option linter.style.nativeDecide false in
+lemma divisor₃_ne_zero : divisor₃ ≠ 0 := by
+  native_decide
+
+def dividend₃ : CMvPolynomial σ Rat := x * y^2 + x
+
+def division₃_lex :=
+  CMvPolynomial.mvDivide (tag := CMonomialOrder.LexOrder) dividend₃ divisor₃ divisor₃_ne_zero
+
+#eval divisor₃.withOrdering CMonomialOrder.lex
+#eval division₃_lex.1.withOrdering CMonomialOrder.lex
+#eval division₃_lex.2.withOrdering CMonomialOrder.lex
+
+def division₃_grlex :=
+  CMvPolynomial.mvDivide (tag := CMonomialOrder.GrlexOrder) dividend₃ divisor₃ divisor₃_ne_zero
+
+#eval divisor₃.withOrdering CMonomialOrder.grlex
+#eval division₃_grlex.1.withOrdering CMonomialOrder.grlex
+#eval division₃_grlex.2.withOrdering CMonomialOrder.grlex
+
+def division₃_grevlex :=
+  CMvPolynomial.mvDivide (tag := CMonomialOrder.GrevlexOrder) dividend₃ divisor₃ divisor₃_ne_zero
+
+#eval divisor₃.withOrdering CMonomialOrder.grevlex
+#eval division₃_grevlex.1.withOrdering CMonomialOrder.grevlex
+#eval division₃_grevlex.2.withOrdering CMonomialOrder.grevlex
+
 end PolynomialDivision
 
 end Examples
