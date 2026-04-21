@@ -1,4 +1,4 @@
-import Fettuccine.Algorithm.Divide
+import Fettuccine.Algorithm.Division
 import Fettuccine.Algorithm.LinearCombination
 
 /-!
