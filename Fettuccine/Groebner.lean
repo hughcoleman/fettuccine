@@ -1,4 +1,4 @@
-import Fettuccine.Divide
+import Fettuccine.Division
 import Fettuccine.CMonomialOrder
 
 /-!

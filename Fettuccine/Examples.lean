@@ -2,7 +2,10 @@ import Fettuccine.CMonomialOrder
 import Fettuccine.CMonomialOrder.Grlex
 import Fettuccine.CMonomialOrder.Grevlex
 import Fettuccine.CMvPolynomial
+import Fettuccine.Division
 import Fettuccine.Repr
+
+namespace Examples
 
 abbrev σ := Fin 3
 
@@ -107,3 +110,34 @@ def f₂ : CMvPolynomial σ Int := 0
 #eval f₂.leadingMonomial grevlex
 
 end LeadingMonomial
+
+namespace PolynomialDivision
+
+open CMvPolynomial CMonomialOrder
+
+def x : CMvPolynomial σ Rat := CMvPolynomial.X 0
+def y : CMvPolynomial σ Rat := CMvPolynomial.X 1
+
+def divisor : CMvPolynomial σ Rat := x + y
+
+set_option linter.style.nativeDecide false in
+lemma divisor_ne_zero : divisor ≠ 0 := by
+  native_decide
+
+def dividend₁ : CMvPolynomial σ Rat := x^2 + x * y + y
+def division₁ :=
+  CMvPolynomial.mvDivide (tag := CMonomialOrder.LexOrder) dividend₁ divisor divisor_ne_zero
+
+#eval division₁.1.withOrdering CMonomialOrder.lex
+#eval division₁.2.withOrdering CMonomialOrder.lex
+
+def dividend₂ : CMvPolynomial σ Rat := x^2 - y^2
+def division₂ :=
+  CMvPolynomial.mvDivide (tag := CMonomialOrder.LexOrder) dividend₂ divisor divisor_ne_zero
+
+#eval division₂.1.withOrdering CMonomialOrder.lex
+#eval division₂.2.withOrdering CMonomialOrder.lex
+
+end PolynomialDivision
+
+end Examples
