@@ -101,6 +101,8 @@ variable {R : Type*} [DecidableEq R] [Field R]
 
 namespace CMvPolynomial
 
+section Single
+
 variable {tag : Type*} [CMonomialOrder.MonomialOrderTag tag σ]
 
 private abbrev taggedOrder {σ : Type*} [DecidableEq σ]
@@ -109,10 +111,53 @@ private abbrev taggedOrder {σ : Type*} [DecidableEq σ]
 
 local notation "ord" => taggedOrder (tag := tag) (σ := σ)
 
-/-- The statement that a given pair of polynomials are a (the) quotient and remainder of a
-    particular polynomial division. -/
-def IsMvQuotientRemainder (f g q r : CMvPolynomial σ R) : Prop :=
-  f = g * q + r ∧ (∀ m ∈ r.support, ¬ in[ord](g) ∣ m)
+/-- The statement that a given pair of polynomial form a (the) quotient and remainder of a
+    particular multivariate polynomial division. -/
+def IsMvQuotientRemainder (f g quot remainder : CMvPolynomial σ R) : Prop :=
+  f = g * quot + remainder ∧ (∀ m ∈ remainder.support, ¬ in[ord](g) ∣ m)
+
+/-- The quotient and remainder of multivariate polynomial division is uniquely determined. -/
+theorem IsMvQuotientRemainder_unique {f g q₁ q₂ r₁ r₂ : CMvPolynomial σ R} (hg : g ≠ 0)
+    (h₁ : IsMvQuotientRemainder (tag := tag) f g q₁ r₁)
+    (h₂ : IsMvQuotientRemainder (tag := tag) f g q₂ r₂) :
+    q₁ = q₂ ∧ r₁ = r₂ := by
+  -- Unfold `IsMvQuotientRemainder` to obtain that `g * (q₁ - q₂) = r₂ - r₁`.
+  unfold IsMvQuotientRemainder at h₁ h₂
+  have h : g * (q₁ - q₂) = r₂ - r₁ := by
+    calc
+      g * (q₁ - q₂) = (g * q₁ + r₁) - (g * q₂ + r₁) := by ring
+      _             = (g * q₂ + r₂) - (g * q₂ + r₁) := by aesop
+      _             = r₂ - r₁                       := by ring
+  -- If `q₁ = q₂`, then the conclusion follows, so suppose towards a contradiction that `q₁ ≠ q₂`.
+  suffices hq : q₁ = q₂ by aesop
+  by_contra hq
+  -- Then, `in(r₂ - r₁)` can be given in terms of the initial monomials of `g` and `q₁ - q₂`.
+  have hq0 : q₁ - q₂ ≠ 0 := sub_ne_zero.mpr hq
+  have hin : in[ord](r₂ - r₁) = in[ord](g) + in[ord](q₁ - q₂) := by
+    calc
+      in[ord](r₂ - r₁) = in[ord](g * (q₁ - q₂))         := by aesop
+      _                = in[ord](g) + in[ord](q₁ - q₂)  := by
+                            apply leadingMonomial_mul <;> assumption
+  -- Since we're working in an integral domain, it follows that `r₂ - r₁ ≠ 0`, and therefore
+  -- `in(r₂ - r₁)` lies in the support of either `r₁` or `r₂`.
+  have hr0 : r₂ - r₁ ≠ 0 := by
+    -- We need to bring `NoZeroDivisors` into the context here, because the `noZeroDivisors`
+    -- construction requires a monomial order.
+    haveI : NoZeroDivisors (CMvPolynomial σ R) := CMvPolynomial.noZeroDivisorsOfMonomialOrder ord
+    aesop
+  have hmem : in[ord](r₂ - r₁) ∈ r₁.support ∪ r₂.support := by
+    have hmem' : in[ord](r₂ - r₁) ∈ r₂.support ∪ r₁.support :=
+      support_sub_subset (f := r₂) (g := r₁)
+        (leadingMonomial_mem_support ord (r₂ - r₁) hr0)
+    simpa [Finset.union_comm] using hmem'
+  -- In either case, it follows that `g` divides either `r₁` or `r₂`, contradicting the property of
+  -- the remainder.
+  have hdiv : in[ord](g) ∣ in[ord](r₂ - r₁) := by
+    rw [hin, CMonomial.dvd_iff]
+    intro i; exact Nat.le_add_right (in[ord](g) i) (in[ord](q₁ - q₂) i)
+  rcases Finset.mem_union.mp hmem with hr₁ | hr₂
+  · exact (h₁.2 _ hr₁) hdiv
+  · exact (h₂.2 _ hr₂) hdiv
 
 -- Instantiate instances of `LinearOrder` and `WellFoundedRelation` on `ord.syn` so that the
 -- termination measure for `mvDivide` is interpreted correctly.
@@ -363,7 +408,7 @@ private lemma mvDivide_br_accumulating (f g : CMvPolynomial σ R) (hg : g ≠ 0)
     mvDivide (tag := tag) f g hg = (q, r + lt_f) := by
   rw [mvDivide.eq_def]; aesop
 
-/-- The results of `mvDivide` satisfy the division relation and remainder constraints. -/
+/-- `mvDivide` produces a quotient and remainder. -/
 theorem mvDivide_spec (f g : CMvPolynomial σ R) (hg : g ≠ 0) :
     let (q, r) := mvDivide (tag := tag) f g hg
     IsMvQuotientRemainder (tag := tag) f g q r := by
@@ -432,47 +477,12 @@ theorem mvDivide_spec (f g : CMvPolynomial σ R) (hg : g ≠ 0) :
       simpa [motive, hstep] using hthis
   simpa [motive] using hmain f
 
-/-- The quotient and remainder of multivariate polynomial division is uniquely determined. -/
-theorem mvDivide_unique {f g q₁ q₂ r₁ r₂ : CMvPolynomial σ R} (hg : g ≠ 0)
-    (h₁ : IsMvQuotientRemainder (tag := tag) f g q₁ r₁)
-    (h₂ : IsMvQuotientRemainder (tag := tag) f g q₂ r₂) :
-    q₁ = q₂ ∧ r₁ = r₂ := by
-  -- Unfold `IsMvQuotientRemainder` to obtain that `g * (q₁ - q₂) = r₂ - r₁`.
-  unfold IsMvQuotientRemainder at h₁ h₂
-  have h : g * (q₁ - q₂) = r₂ - r₁ := by
-    calc
-      g * (q₁ - q₂) = (g * q₁ + r₁) - (g * q₂ + r₁) := by ring
-      _             = (g * q₂ + r₂) - (g * q₂ + r₁) := by aesop
-      _             = r₂ - r₁                       := by ring
-  -- If `q₁ = q₂`, then the conclusion follows, so suppose towards a contradiction that `q₁ ≠ q₂`.
-  suffices hq : q₁ = q₂ by aesop
-  by_contra hq
-  -- Then, `in(r₂ - r₁)` can be given in terms of the initial monomials of `g` and `q₁ - q₂`.
-  have hq0 : q₁ - q₂ ≠ 0 := sub_ne_zero.mpr hq
-  have hin : in[ord](r₂ - r₁) = in[ord](g) + in[ord](q₁ - q₂) := by
-    calc
-      in[ord](r₂ - r₁) = in[ord](g * (q₁ - q₂))         := by aesop
-      _                = in[ord](g) + in[ord](q₁ - q₂)  := by
-                            apply leadingMonomial_mul <;> assumption
-  -- Since we're working in an integral domain, it follows that `r₂ - r₁ ≠ 0`, and therefore
-  -- `in(r₂ - r₁)` lies in the support of either `r₁` or `r₂`.
-  have hr0 : r₂ - r₁ ≠ 0 := by
-    -- We need to bring `NoZeroDivisors` into the context here, because the `noZeroDivisors`
-    -- construction requires a monomial order.
-    haveI : NoZeroDivisors (CMvPolynomial σ R) := CMvPolynomial.noZeroDivisorsOfMonomialOrder ord
-    aesop
-  have hmem : in[ord](r₂ - r₁) ∈ r₁.support ∪ r₂.support := by
-    have hmem' : in[ord](r₂ - r₁) ∈ r₂.support ∪ r₁.support :=
-      support_sub_subset (f := r₂) (g := r₁)
-        (leadingMonomial_mem_support ord (r₂ - r₁) hr0)
-    simpa [Finset.union_comm] using hmem'
-  -- In either case, it follows that `g` divides either `r₁` or `r₂`, contradicting the property of
-  -- the remainder.
-  have hdiv : in[ord](g) ∣ in[ord](r₂ - r₁) := by
-    rw [hin, CMonomial.dvd_iff]
-    intro i; exact Nat.le_add_right (in[ord](g) i) (in[ord](q₁ - q₂) i)
-  rcases Finset.mem_union.mp hmem with hr₁ | hr₂
-  · exact (h₁.2 _ hr₁) hdiv
-  · exact (h₂.2 _ hr₂) hdiv
+end Single
+
+section Multiple
+
+-- WIP: `multipleMvDivide` for simultaneous division against a list of divisors.
+
+end Multiple
 
 end CMvPolynomial
