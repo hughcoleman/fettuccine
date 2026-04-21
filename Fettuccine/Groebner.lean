@@ -31,8 +31,8 @@ def sPolynomial (f g : CMvPolynomial σ R) : CMvPolynomial σ R :=
   -- These divisions always succeed, since the lowest common multiple is always divisible by both
   -- its factors.
   let γ   := CMonomial.lcm lm_f lm_g
-  let mf  := (CMonomial.divide γ lm_f).getD 0
-  let mg  := (CMonomial.divide γ lm_g).getD 0
+  let mf  := (CMonomial.div γ lm_f).getD 0
+  let mg  := (CMonomial.div γ lm_g).getD 0
   ofMonomial mf (leadingCoefficient ord g) * f - ofMonomial mg (leadingCoefficient ord f) * g
 
 -- /-- The statement that a polynomial `f` reduces to zero modulo a list of divisors `gs`. -/
