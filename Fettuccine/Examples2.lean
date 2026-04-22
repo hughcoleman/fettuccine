@@ -1,17 +1,3 @@
-# fettuccine
-
-_"It looks like one of those noodles... fettuccine?"_
-
-A mostly-executable, self-certifying implementation of Buchberger's algorithm.
-
-> [!CAUTION]
-> For entirely unknown reasons, this implementation sometimes unpredictably segfaults Lean, especially when working with the grlex or grevlex monomial orders.
-
-## Example
-
-We can compute a Gr&ouml;bner basis for the ideal $$I = (x y - z, x z - y, y z - x)$$ with respect to the grevlex order as follows.
-
-```lean
 import Fettuccine.Buchberger
 import Fettuccine.CMonomialOrder
 import Fettuccine.CMonomialOrder.Grlex
@@ -45,4 +31,3 @@ example : Groebner.IsGroebnerBasis CMonomialOrder.GrevlexOrder I gb.basis :=
 
 #eval gb.basis
 -- [yx + -1*z, zx + -1*y, -1*x + zy, y^2 + -1*z^2, x^2 + -1*z^2, z^3 + -1*z]
-```
