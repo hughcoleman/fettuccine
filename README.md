@@ -3,6 +3,7 @@
 _"It looks like one of those noodles... fettuccine?"_
 
 A mostly-executable, self-certifying implementation of Buchberger's algorithm.
+It is implemented in Lean 4.29, and, other than Mathlib 4.29, has no external dependencies.
 
 > [!CAUTION]
 > For entirely unknown reasons, this implementation sometimes unpredictably segfaults Lean, especially when working with the grlex or grevlex monomial orders.
