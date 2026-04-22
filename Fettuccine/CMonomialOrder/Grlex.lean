@@ -277,4 +277,14 @@ inductive GrlexOrder : Type where
 instance grlexOrderTag : MonomialOrderTag GrlexOrder σ where
   ord := grlex
 
+namespace CurrentMonomialOrderTag
+
+/-- Select graded lexicographic order as the current monomial order. -/
+@[reducible] def grlex (σ : Type*) [DecidableEq σ] [LinearOrder σ] [WellFoundedGT σ] :
+    CurrentMonomialOrderTag σ where
+  tag := GrlexOrder
+  inst := inferInstance
+
+end CurrentMonomialOrderTag
+
 end CMonomialOrder

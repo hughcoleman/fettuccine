@@ -313,4 +313,14 @@ inductive GrevlexOrder : Type where
 instance grevlexOrderTag : MonomialOrderTag GrevlexOrder σ where
   ord := grevlex
 
+namespace CurrentMonomialOrderTag
+
+/-- Select graded reverse lexicographic order as the current monomial order. -/
+@[reducible] def grevlex (σ : Type*) [DecidableEq σ] [LinearOrder σ] [Finite σ] :
+    CurrentMonomialOrderTag σ where
+  tag := GrevlexOrder
+  inst := inferInstance
+
+end CurrentMonomialOrderTag
+
 end CMonomialOrder

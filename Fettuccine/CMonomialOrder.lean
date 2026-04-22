@@ -473,6 +473,21 @@ instance lexOrderTag {σ : Type*} [DecidableEq σ] [LinearOrder σ] [WellFounded
     MonomialOrderTag LexOrder σ where
   ord := lex
 
+/-- A mechanism for locally selecting a monomial order to use. -/
+class CurrentMonomialOrderTag (σ : Type u) [DecidableEq σ] where
+  tag : Type v
+  inst : MonomialOrderTag tag σ
+
+namespace CurrentMonomialOrderTag
+
+/-- Select lexicographic order as the current monomial order. -/
+@[reducible] def lex (σ : Type*) [DecidableEq σ] [LinearOrder σ] [WellFoundedGT σ] :
+    CurrentMonomialOrderTag σ where
+  tag := LexOrder
+  inst := inferInstance
+
+end CurrentMonomialOrderTag
+
 end CMonomialOrder
 
 namespace CMvPolynomial
