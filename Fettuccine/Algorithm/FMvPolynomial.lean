@@ -15,6 +15,15 @@ representations of monomials (`CMonomial σ`) and multivariate polynomials (`CMv
 - `FMvPolynomial.C a` : the constant polynomial with value `a`.
 -/
 
+/-- A fallback `Repr` for `Fin n`, displaying indices as `x₀`, `x₁`, etc. -/
+instance Fin.fallbackRepr {n : ℕ} : Repr (Fin n) where
+  reprPrec i _ := "x" ++ String.map digits (toString i.val)
+where
+  digits : Char → Char
+    | '0' => '₀' | '1' => '₁' | '2' => '₂' | '3' => '₃' | '4' => '₄'
+    | '5' => '₅' | '6' => '₆' | '7' => '₇' | '8' => '₈' | '9' => '₉'
+    | c   => c
+
 /-- A monomial on `n` variables is represented as an array of exponents (alongside a proof that it
     is of the intended length). -/
 structure FMonomial (n : ℕ) where
@@ -57,7 +66,7 @@ def lcm (m₁ m₂ : FMonomial n) : FMonomial n where
 
 /-- Two monomials are said to be **relatively prime** if they share no common variables with
     positive exponents. -/
-def relativelyPrime? (m₁ m₂ : FMonomial n) : Bool :=
+def isRelativelyPrime (m₁ m₂ : FMonomial n) : Bool :=
   Id.run do
     for i in [:n] do
       let a := m₁.data.getD i 0
@@ -65,6 +74,19 @@ def relativelyPrime? (m₁ m₂ : FMonomial n) : Bool :=
       if !(a == 0 || b == 0) then
         return false
     return true
+
+/-- Display a fast monomial as a product of variables. -/
+instance {n : ℕ} [Repr (Fin n)] : Repr (FMonomial n) where
+  reprPrec m _ :=
+    let terms :=
+      (Array.ofFn fun i : Fin n =>
+        match m.data.getD i.val 0 with
+        | 0 => none
+        | 1 => some f!"{reprPrec i 0}"
+        | e => some f!"{reprPrec i 0}^{e}").toList.filterMap id
+    if terms.isEmpty then "1"
+    else
+      Std.Format.joinSep terms ""
 
 end FMonomial
 
@@ -86,5 +108,18 @@ def X [One R] (i : Fin n) : FMvPolynomial n R := #[(FMonomial.X i, 1)]
 /-- The constant polynomial `a`. -/
 def C [DecidableEq R] [Zero R] (a : R) : FMvPolynomial n R :=
   if a = 0 then #[] else #[(FMonomial.zero n, a)]
+
+/-- Display a fast polynomial in the order in which its terms are stored. -/
+instance {n : ℕ} {R : Type*} [DecidableEq R] [Zero R] [One R] [Repr R] :
+    Repr (FMvPolynomial n R) where
+  reprPrec f _ :=
+    let terms := f.toList.filterMap fun (m, coeff) =>
+      if coeff = 0 then none
+      else if m = FMonomial.zero n then some f!"{reprPrec coeff 0}"
+      else if coeff = 1 then some f!"{reprPrec m 0}"
+      else some f!"{reprPrec coeff 0}*{reprPrec m 0}"
+    if terms.isEmpty then "0"
+    else
+      Std.Format.joinSep terms " + "
 
 end FMvPolynomial

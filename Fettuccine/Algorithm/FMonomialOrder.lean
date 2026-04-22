@@ -1,4 +1,5 @@
 import Fettuccine.Algorithm.FMvPolynomial
+import Mathlib.Algebra.Field.Rat
 
 /-!
 # Fast Monomial Orders
@@ -22,17 +23,23 @@ def lex {n : ℕ} (m₁ m₂ : FMonomial n) : Ordering :=
   Id.run do
     for i in (List.range n) do
       let (a, b) := (m₁.data.getD i 0, m₂.data.getD i 0)
-      if a < b then return .lt
-      if a > b then return .gt
+      if a < b then
+        return .lt
+      if a > b then
+        return .gt
     return .eq
 
 /-- The reverse lexicographic order on monomials. -/
-private def revlex {n : ℕ} (m₁ m₂ : FMonomial n) : Ordering :=
+-- One way to obtain the reverse lexicographic order is to reverse the underlying alphabet, apply
+-- `lex`, and then reverse.
+def revlex {n : ℕ} (m₁ m₂ : FMonomial n) : Ordering :=
   Id.run do
     for i in (List.range n).reverse do
       let (a, b) := (m₁.data.getD i 0, m₂.data.getD i 0)
-      if a < b then return .gt
-      if a > b then return .lt
+      if a < b then
+        return .gt
+      if a > b then
+        return .lt
     return .eq
 
 /-- The graded lexicographic order on monomials. -/
@@ -46,6 +53,25 @@ def grevlex {n : ℕ} (m₁ m₂ : FMonomial n) : Ordering :=
   match compare m₁.degree m₂.degree with
   | .eq => revlex m₁ m₂
   | o   => o
+
+section Examples
+
+private abbrev S := FMvPolynomial 3 ℚ
+
+-- A small helper for generating monomials.
+private def m (a b c : ℕ) : FMonomial 3 :=
+  { data := #[a, b, c], hsize := by simp }
+
+#eval lex (m 1 0 0) (m 0 1 0)  -- .gt  (x > y)
+#eval lex (m 0 2 0) (m 0 1 1)  -- .gt  (y² > yz)
+
+#eval grlex (m 0 1 0) (m 2 0 0)  -- .lt (y < x²: lower degree)
+#eval grlex (m 1 1 0) (m 2 0 0)  -- .lt (xy < x²: same degree, lex)
+
+#eval grevlex (m 1 0 0) (m 0 0 1)  -- .gt (x > z under grevlex)
+#eval grevlex (m 2 0 0) (m 0 2 0)  -- .gt (x² > y² under grevlex)
+
+end Examples
 
 end FMonomialOrder
 
@@ -121,30 +147,6 @@ def mul [Mul R] (f g : FMvPolynomial n R) : FMvPolynomial n R :=
 /-- Equality after lexicographic normalization. -/
 def equal? (f g : FMvPolynomial n R) : Prop :=
   normalize f = normalize g
-
-instance decidableEqual? (f g : FMvPolynomial n R) : Decidable (equal? f g) := by
-  unfold equal?
-  infer_instance
-
-/-- Boolean test for equality after lexicographic normalization. -/
-def decideEqual? (f g : FMvPolynomial n R) : Bool :=
-  decide (equal? f g)
-
-instance instNeg [Neg R] : Neg (FMvPolynomial n R) :=
-  ⟨fun f => f.map fun (m, c) => (m, -c)⟩
-
-instance instAdd [AddMonoid R] : Add (FMvPolynomial n R) :=
-  ⟨add⟩
-
-instance instSub [AddGroup R] : Sub (FMvPolynomial n R) :=
-  ⟨sub⟩
-
-instance instMul [Mul R] : Mul (FMvPolynomial n R) :=
-  ⟨mul⟩
-
-instance instHPow [One R] [Mul R] :
-    HPow (FMvPolynomial n R) ℕ (FMvPolynomial n R) :=
-  ⟨fun f k => Nat.rec #[(FMonomial.zero n, (1 : R))] (fun _ p => mul p f) k⟩
 
 /-- Embed a numeric literal `k` as the constant polynomial `C k`. -/
 instance instOfNat {k : ℕ} [OfNat R k] :

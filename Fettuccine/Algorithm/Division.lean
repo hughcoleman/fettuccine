@@ -9,17 +9,17 @@ This file implements the division algorithm for `FMvPolynomial R` with respect t
 
 ## Definitions
 
-* `divide ord f gs fuel` : divides `f` by the divisors `gs` with respect to the monomial order
-  `ord`, constrained by `fuel`.
-* `divide₁ ord f g fuel` : divides `f` by `g` with respect to the monomial order `ord`.
+* `untrustedMvDivide ord f gs (fuel)` : divides the polynomial `f` by the divisors `gs` with
+  respect to the monomial order `ord`, constrained by `fuel` (default: 4096).
 -/
 
 namespace FMonomial
 
 variable {n : ℕ}
 
--- A decidable predicate for monomial divisibility.
-def divides? (m₁ m₂ : FMonomial n) : Bool :=
+/-- A decidable predicate for monomial divisibility. -/
+-- [FUTURE-FIXME]: Eliminate the usage of `Id.run`.
+def dvd (m₁ m₂ : FMonomial n) : Bool :=
   Id.run do
     for i in [:n] do
       if !(Nat.ble (m₁.data.getD i 0) (m₂.data.getD i 0)) then
@@ -27,10 +27,11 @@ def divides? (m₁ m₂ : FMonomial n) : Bool :=
     return true
 
 /-- Divide the monomial `m₁` by `m₂`, if possible. -/
+-- [FUTURE-FIXME]: Rename this to `div`.
 def divide (m₁ m₂ : FMonomial n) : Option (FMonomial n) :=
-  if divides? m₂ m₁ then
+  if dvd m₂ m₁ then
     some {
-      data := Array.zipWith (· - ·) m₁.data m₂.data
+      data  := Array.zipWith (· - ·) m₁.data m₂.data
       hsize := by simp [m₁.hsize, m₂.hsize]
     }
   else
@@ -43,10 +44,14 @@ namespace FMvPolynomial
 variable {n : ℕ}
 variable {R : Type*} [DecidableEq R] [Zero R] [AddGroup R] [DivisionRing R]
 
+variable (ord : FMonomialOrder n)
+
 /-- Divide `f` by the divisors `gs` with respect to the monomial order `ord`. -/
--- NOTE: `gs` is assumed to be a non-empty array of normalized, non-zero polynomials.
-def mvDivide (ord : FMonomial n → FMonomial n → Ordering)
-    (f : FMvPolynomial n R) (gs : Array (FMvPolynomial n R)) (fuel : ℕ := 4096) -- should be enough
+def untrustedMvDivide (f : FMvPolynomial n R) (gs : Array (FMvPolynomial n R))
+    -- This should be more than enough fuel for any practical example, since every division reduces
+    -- the degree of the dividend by at least one, so you'd have to be working with lots of
+    -- polynomials of large degree for this to begin to be an issue.
+    (fuel : ℕ := 4096)
     : Array (FMvPolynomial n R) × FMvPolynomial n R :=
   loop fuel f (Array.replicate gs.size #[]) #[]
 where
@@ -54,16 +59,17 @@ where
       monomial quotient. -/
   findDivisor (lm_f : FMonomial n) : Option (Nat × FMvPolynomial n R × R × FMonomial n) :=
     Id.run do
-      for i in [:gs.size] do
-        let g := gs[i]!
+      for h : i in [:gs.size] do
+        -- An opportunity for a proof: that the index is within bounds.
+        let g := gs[i]'(Membership.get_elem_helper h rfl)
         match g.leadingTerm ord with
-        | none => pure PUnit.unit
+        | none              => pure PUnit.unit
         | some (lm_g, lc_g) =>
           match FMonomial.divide lm_f lm_g with
           | none   => pure PUnit.unit
           | some m => return some (i, g, lc_g, m)
       return none
-  /-- Repeatedly look for divisors, until `fuel` is exhausted. -/
+  /-- Repeatedly look for a possible divisor, until `fuel` is exhausted. -/
   loop : ℕ → FMvPolynomial n R → Array (FMvPolynomial n R) → FMvPolynomial n R
       → Array (FMvPolynomial n R) × FMvPolynomial n R
     | 0, _, qs, r => (qs, r)
@@ -82,11 +88,5 @@ where
           let f'  := sub f (mulMonomial m c g)
           let qs' := qs.set! i (add qs[i]! #[(m, c)])
           loop fuel f' qs' r
-
-/-- Divide `f` by a single divisor `g`. -/
-def mvDivide₁ (ord : FMonomial n → FMonomial n → Ordering)
-    (f g : FMvPolynomial n R) (fuel : ℕ := 4096) : FMvPolynomial n R × FMvPolynomial n R :=
-  let (qs, r) := mvDivide ord f #[g] fuel
-  (qs.getD 0 #[], r)
 
 end FMvPolynomial
