@@ -3,7 +3,6 @@ import Fettuccine.CMonomialOrder
 import Fettuccine.CMonomialOrder.Grlex
 import Fettuccine.CMonomialOrder.Grevlex
 import Fettuccine.CMvPolynomial
-import Fettuccine.Division
 import Fettuccine.Repr
 
 namespace Examples
@@ -128,10 +127,10 @@ def gb₁? : Option (Buchberger.GroebnerBasis I₁ CMonomialOrder.LexOrder) :=
   Buchberger.buchberger _ I₁ 32
 def gb₁ := gb₁?.get (by native_decide)
 
-#eval gb₁.basis
-
 example : Groebner.IsGroebnerBasis CMonomialOrder.LexOrder I₁ gb₁.basis :=
   gb₁.h
+
+#eval gb₁.basis
 
 -- I₂ = ⟨xy - z, xz - y, yz - x⟩
 def I₂ : List (CMvPolynomial σ Rat) := [x * y - z, x * z - y, y * z - x]
@@ -139,10 +138,10 @@ def gb₂? : Option (Buchberger.GroebnerBasis I₂ CMonomialOrder.GrevlexOrder) 
   Buchberger.buchberger _ I₂ 32
 def gb₂ := gb₂?.get (by native_decide)
 
-#eval gb₂.basis
-
 example : Groebner.IsGroebnerBasis CMonomialOrder.GrevlexOrder I₂ gb₂.basis :=
   gb₂.h
+
+#eval gb₂.basis
 
 end Buchberger
 

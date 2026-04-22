@@ -213,7 +213,7 @@ example : gb₁.G = #[
       #[(m 1 0 0, -1), (m 0 2 0, 1)], -- -x + y²
       #[(m 0 3 0, -1), (m 0 0 0, 1)], -- -y³ + 1
     ] := by
-  decide +native
+  native_decide
 
 -- I₂ = (xy - z, xz - y, yz - x)
 private def g₁ : S := #[(m 1 1 0, 1), (m 0 0 1, -1)] -- xy - z
