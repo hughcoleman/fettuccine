@@ -1,4 +1,5 @@
 import Fettuccine.CMvPolynomial
+import Fettuccine.Algorithm.FMonomialOrder
 import Mathlib.Algebra.DirectSum.Internal
 import Mathlib.Data.DFinsupp.WellFounded
 import Mathlib.Data.Finset.Sort
@@ -462,31 +463,26 @@ universe u v
 -- Passing a `CMonomialOrder` as a value-level argument causes unpredictable segfaults. By
 -- introducing a type-level "tag" for monomial orders, we can make computations generic over the
 -- tag, enabling specialization for concrete orders.
-class MonomialOrderTag (tag : Type v) (σ : Type u) [DecidableEq σ] where
+class CMonomialOrderTag (tag : Type v) (σ : Type u) [DecidableEq σ] where
   ord : CMonomialOrder.{u, u} σ
+
+/-- The fast implementation corresponding to a type-level monomial-order tag.
+
+This is used only to choose the array-backed order passed to the untrusted computation layer. The
+trusted statement remains phrased in terms of `CMonomialOrder`. -/
+class FMonomialOrderTag (tag : Type v) (n : ℕ) where
+  ord : FMonomialOrder n
 
 /-- Type-level tag for lexicographic monomial order. -/
 inductive LexOrder : Type where
   | mk
 
 instance lexOrderTag {σ : Type*} [DecidableEq σ] [LinearOrder σ] [WellFoundedGT σ] :
-    MonomialOrderTag LexOrder σ where
+    CMonomialOrderTag LexOrder σ where
   ord := lex
 
-/-- A mechanism for locally selecting a monomial order to use. -/
-class CurrentMonomialOrderTag (σ : Type u) [DecidableEq σ] where
-  tag : Type v
-  inst : MonomialOrderTag tag σ
-
-namespace CurrentMonomialOrderTag
-
-/-- Select lexicographic order as the current monomial order. -/
-@[reducible] def lex (σ : Type*) [DecidableEq σ] [LinearOrder σ] [WellFoundedGT σ] :
-    CurrentMonomialOrderTag σ where
-  tag := LexOrder
-  inst := inferInstance
-
-end CurrentMonomialOrderTag
+instance lexFastOrderTag (n : ℕ) : FMonomialOrderTag LexOrder n where
+  ord := FMonomialOrder.lex
 
 end CMonomialOrder
 

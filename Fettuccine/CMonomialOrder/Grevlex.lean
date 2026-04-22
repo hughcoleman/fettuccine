@@ -1,4 +1,5 @@
 import Fettuccine.CMonomialOrder
+import Fettuccine.Algorithm.FMonomialOrder
 import Mathlib.Algebra.Group.TransferInstance
 import Mathlib.Data.DFinsupp.WellFounded
 
@@ -310,17 +311,10 @@ theorem grevlex.IsGraded : (grevlex (σ := σ)).IsGraded := by
 inductive GrevlexOrder : Type where
   | mk
 
-instance grevlexOrderTag : MonomialOrderTag GrevlexOrder σ where
+instance grevlexOrderTag : CMonomialOrderTag GrevlexOrder σ where
   ord := grevlex
 
-namespace CurrentMonomialOrderTag
-
-/-- Select graded reverse lexicographic order as the current monomial order. -/
-@[reducible] def grevlex (σ : Type*) [DecidableEq σ] [LinearOrder σ] [Finite σ] :
-    CurrentMonomialOrderTag σ where
-  tag := GrevlexOrder
-  inst := inferInstance
-
-end CurrentMonomialOrderTag
+instance grevlexFastOrderTag (n : ℕ) : FMonomialOrderTag GrevlexOrder n where
+  ord := FMonomialOrder.grevlex
 
 end CMonomialOrder

@@ -1,3 +1,4 @@
+import Fettuccine.Buchberger
 import Fettuccine.CMonomialOrder
 import Fettuccine.CMonomialOrder.Grlex
 import Fettuccine.CMonomialOrder.Grevlex
@@ -27,9 +28,9 @@ def f₂ := 2*x^2 + 1*y^3 + 4*z
 def f₃ := x^2*y^3 + 2*x*y^2 + 3*z^2 + 1
 
 -- Render polynomials using an explicit monomial order.
-#eval f₁.withOrdering CMonomialOrder.lex
-#eval (f₁ + f₂).withOrdering CMonomialOrder.grlex
-#eval (0 : CMvPolynomial σ Int).withOrdering CMonomialOrder.lex
+#eval f₁
+#eval f₁ + f₂
+#eval (0 : CMvPolynomial σ Int)
 
 -- We can also compute with polynomials.
 example : 3*x^2 ≠ 0 ∧ 2*y^3 ≠ 0 ∧ 3*z + 1 ≠ 0 ∧ 1 ≠ 0 := by
@@ -93,7 +94,7 @@ end MonomialOrder
 
 namespace LeadingMonomial
 
-open CMonomialOrder CMvPolynomial
+open CMvPolynomial CMonomialOrder
 
 def x : CMvPolynomial σ Int := CMvPolynomial.X 0
 def y : CMvPolynomial σ Int := CMvPolynomial.X 1
@@ -111,74 +112,38 @@ def f₂ : CMvPolynomial σ Int := 0
 
 end LeadingMonomial
 
-namespace PolynomialDivision
+namespace Buchberger
+
+set_option linter.style.nativeDecide false
 
 open CMvPolynomial CMonomialOrder
 
 def x : CMvPolynomial σ Rat := CMvPolynomial.X 0
 def y : CMvPolynomial σ Rat := CMvPolynomial.X 1
+def z : CMvPolynomial σ Rat := CMvPolynomial.X 2
 
-def divisor : CMvPolynomial σ Rat := x + y
+-- I₁ = ⟨xy - 1, x² - y⟩
+def I₁ : List (CMvPolynomial σ Rat) := [x * y - 1, x^2 - y]
+def gb₁? : Option (Buchberger.GroebnerBasis I₁ CMonomialOrder.LexOrder) :=
+  Buchberger.buchberger _ I₁ 32
+def gb₁ := gb₁?.get (by native_decide)
 
-set_option linter.style.nativeDecide false in
-lemma divisor_ne_zero : divisor ≠ 0 := by
-  native_decide
+#eval gb₁.basis
 
-def dividend₁ : CMvPolynomial σ Rat := x^2 + x * y + y
-def division₁ :=
-  CMvPolynomial.mvDivide (tag := CMonomialOrder.LexOrder) dividend₁ divisor divisor_ne_zero
+example : Groebner.IsGroebnerBasis CMonomialOrder.LexOrder I₁ gb₁.basis :=
+  gb₁.h
 
-#eval division₁.1.withOrdering CMonomialOrder.lex
-#eval division₁.2.withOrdering CMonomialOrder.lex
+-- I₂ = ⟨xy - z, xz - y, yz - x⟩
+def I₂ : List (CMvPolynomial σ Rat) := [x * y - z, x * z - y, y * z - x]
+def gb₂? : Option (Buchberger.GroebnerBasis I₂ CMonomialOrder.GrevlexOrder) :=
+  Buchberger.buchberger _ I₂ 32
+def gb₂ := gb₂?.get (by native_decide)
 
-def dividend₂ : CMvPolynomial σ Rat := x^2 - y^2
-def division₂ :=
-  CMvPolynomial.mvDivide (tag := CMonomialOrder.LexOrder) dividend₂ divisor divisor_ne_zero
+#eval gb₂.basis
 
-#eval division₂.1.withOrdering CMonomialOrder.lex
-#eval division₂.2.withOrdering CMonomialOrder.lex
+example : Groebner.IsGroebnerBasis CMonomialOrder.GrevlexOrder I₂ gb₂.basis :=
+  gb₂.h
 
-def division₂_grlex :=
-  CMvPolynomial.mvDivide (tag := CMonomialOrder.GrlexOrder) dividend₂ divisor divisor_ne_zero
-
-#eval division₂_grlex.1.withOrdering CMonomialOrder.grlex
-#eval division₂_grlex.2.withOrdering CMonomialOrder.grlex
-
-def division₂_grevlex :=
-  CMvPolynomial.mvDivide (tag := CMonomialOrder.GrevlexOrder) dividend₂ divisor divisor_ne_zero
-
-#eval division₂_grevlex.1.withOrdering CMonomialOrder.grevlex
-#eval division₂_grevlex.2.withOrdering CMonomialOrder.grevlex
-
-def divisor₃ : CMvPolynomial σ Rat := x + y^2
-
-set_option linter.style.nativeDecide false in
-lemma divisor₃_ne_zero : divisor₃ ≠ 0 := by
-  native_decide
-
-def dividend₃ : CMvPolynomial σ Rat := x * y^2 + x
-
-def division₃_lex :=
-  CMvPolynomial.mvDivide (tag := CMonomialOrder.LexOrder) dividend₃ divisor₃ divisor₃_ne_zero
-
-#eval divisor₃.withOrdering CMonomialOrder.lex
-#eval division₃_lex.1.withOrdering CMonomialOrder.lex
-#eval division₃_lex.2.withOrdering CMonomialOrder.lex
-
-def division₃_grlex :=
-  CMvPolynomial.mvDivide (tag := CMonomialOrder.GrlexOrder) dividend₃ divisor₃ divisor₃_ne_zero
-
-#eval divisor₃.withOrdering CMonomialOrder.grlex
-#eval division₃_grlex.1.withOrdering CMonomialOrder.grlex
-#eval division₃_grlex.2.withOrdering CMonomialOrder.grlex
-
-def division₃_grevlex :=
-  CMvPolynomial.mvDivide (tag := CMonomialOrder.GrevlexOrder) dividend₃ divisor₃ divisor₃_ne_zero
-
-#eval divisor₃.withOrdering CMonomialOrder.grevlex
-#eval division₃_grevlex.1.withOrdering CMonomialOrder.grevlex
-#eval division₃_grevlex.2.withOrdering CMonomialOrder.grevlex
-
-end PolynomialDivision
+end Buchberger
 
 end Examples

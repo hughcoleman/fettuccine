@@ -1,4 +1,5 @@
 import Fettuccine.CMonomialOrder
+import Fettuccine.Algorithm.FMonomialOrder
 import Mathlib.Algebra.Group.TransferInstance
 import Mathlib.Data.DFinsupp.Lex
 
@@ -274,17 +275,10 @@ theorem grlex.IsGraded : (grlex (σ := σ)).IsGraded := by
 inductive GrlexOrder : Type where
   | mk
 
-instance grlexOrderTag : MonomialOrderTag GrlexOrder σ where
+instance grlexOrderTag : CMonomialOrderTag GrlexOrder σ where
   ord := grlex
 
-namespace CurrentMonomialOrderTag
-
-/-- Select graded lexicographic order as the current monomial order. -/
-@[reducible] def grlex (σ : Type*) [DecidableEq σ] [LinearOrder σ] [WellFoundedGT σ] :
-    CurrentMonomialOrderTag σ where
-  tag := GrlexOrder
-  inst := inferInstance
-
-end CurrentMonomialOrderTag
+instance grlexFastOrderTag (n : ℕ) : FMonomialOrderTag GrlexOrder n where
+  ord := FMonomialOrder.grlex
 
 end CMonomialOrder
