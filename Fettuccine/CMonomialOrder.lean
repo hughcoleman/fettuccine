@@ -5,7 +5,7 @@ import Mathlib.Data.DFinsupp.WellFounded
 import Mathlib.Data.Finset.Sort
 
 /-!
-# CMonomial Orders
+# Monomial Orders
 
 This file defines `CMonomialOrder`, a structure representing monomial orders on `CMonomial σ`, and
 provides the lexicographic (lex) monomial order. For the most part, the structure of this file
