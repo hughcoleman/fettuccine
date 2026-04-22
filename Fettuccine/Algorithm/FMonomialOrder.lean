@@ -14,33 +14,27 @@ type `FMonomial n → FMonomial n → Ordering`.
 * `FMonomialOrder.grevlex` - the graded reverse lexicographic order on `FMonomial`.
 -/
 
+/-- A **monomial order** on `FMonomial n` is a total, translation-invariant well-founded binary
+    relation. -/
 abbrev FMonomialOrder (n : ℕ) := FMonomial n → FMonomial n → Ordering
 
 namespace FMonomialOrder
 
 /-- The lexicographic order on monomials. -/
 def lex {n : ℕ} (m₁ m₂ : FMonomial n) : Ordering :=
-  Id.run do
-    for i in (List.range n) do
-      let (a, b) := (m₁.data.getD i 0, m₂.data.getD i 0)
-      if a < b then
-        return .lt
-      if a > b then
-        return .gt
-    return .eq
+  (List.range n).foldl (init := .eq) fun acc i =>
+    match acc with
+    | .eq => compare (m₁.toArray.getD i 0) (m₂.toArray.getD i 0)
+    | o   => o
 
 /-- The reverse lexicographic order on monomials. -/
 -- One way to obtain the reverse lexicographic order is to reverse the underlying alphabet, apply
 -- `lex`, and then reverse.
 def revlex {n : ℕ} (m₁ m₂ : FMonomial n) : Ordering :=
-  Id.run do
-    for i in (List.range n).reverse do
-      let (a, b) := (m₁.data.getD i 0, m₂.data.getD i 0)
-      if a < b then
-        return .gt
-      if a > b then
-        return .lt
-    return .eq
+  ((List.range n).reverse).foldl (init := .eq) fun acc i =>
+    match acc with
+    | .eq => compare (m₂.toArray.getD i 0) (m₁.toArray.getD i 0)
+    | o   => o
 
 /-- The graded lexicographic order on monomials. -/
 def grlex {n : ℕ} (m₁ m₂ : FMonomial n) : Ordering :=
@@ -56,20 +50,24 @@ def grevlex {n : ℕ} (m₁ m₂ : FMonomial n) : Ordering :=
 
 section Examples
 
-private abbrev S := FMvPolynomial 3 ℚ
+private abbrev m (a b c : ℕ) : FMonomial 3 :=
+  Vector.mk #[a, b, c] (by simp)
 
--- A small helper for generating monomials.
-private def m (a b c : ℕ) : FMonomial 3 :=
-  { data := #[a, b, c], hsize := by simp }
-
-#eval lex (m 1 0 0) (m 0 1 0)  -- .gt  (x > y)
-#eval lex (m 0 2 0) (m 0 1 1)  -- .gt  (y² > yz)
-
-#eval grlex (m 0 1 0) (m 2 0 0)  -- .lt (y < x²: lower degree)
-#eval grlex (m 1 1 0) (m 2 0 0)  -- .lt (xy < x²: same degree, lex)
-
-#eval grevlex (m 1 0 0) (m 0 0 1)  -- .gt (x > z under grevlex)
-#eval grevlex (m 2 0 0) (m 0 2 0)  -- .gt (x² > y² under grevlex)
+-- x >[lex] y
+example : lex (m 1 0 0) (m 0 1 0) == .gt := by
+  rfl
+-- y² >[lex] yz
+example : lex (m 0 2 0) (m 0 1 1) == .gt := by
+  rfl
+-- y <[grlex] x²
+example : grlex (m 0 1 0) (m 2 0 0) == .lt := by
+  rfl
+-- xy <[grlex] x² (same degree, so fall back to lex)
+example : grlex (m 1 1 0) (m 2 0 0) == .lt := by
+  rfl
+-- xz <[grevlex] y²
+example : grevlex (m 1 0 1) (m 0 2 0) == .lt := by
+  rfl
 
 end Examples
 
@@ -127,7 +125,7 @@ where
       else
         acc.push (m, c)
 
-/-- Add two multivariate polynomials and re-normalize lexicographically. -/
+/-- Add two multivariate polynomials. -/
 def add (f g : FMvPolynomial n R) : FMvPolynomial n R :=
   normalize (f ++ g)
 
@@ -135,22 +133,13 @@ def add (f g : FMvPolynomial n R) : FMvPolynomial n R :=
 def sub [AddGroup R] (f g : FMvPolynomial n R) : FMvPolynomial n R :=
   add f (g.map fun (m, c) => (m, -c))
 
-/-- Multiply a polynomial by a monomial term and re-normalize lexicographically. -/
+/-- Multiply a polynomial by a monomial term. -/
 def mulMonomial [Mul R] (m : FMonomial n) (c : R)
     (f : FMvPolynomial n R) : FMvPolynomial n R :=
   normalize (f.map fun (m', c') => (FMonomial.add m m', c * c'))
 
-/-- Multiply two multivariate polynomials and re-normalize lexicographically. -/
+/-- Multiply two multivariate polynomials. -/
 def mul [Mul R] (f g : FMvPolynomial n R) : FMvPolynomial n R :=
   f.foldl (init := #[]) fun acc (m, c) => add acc (mulMonomial m c g)
-
-/-- Equality after lexicographic normalization. -/
-def equal? (f g : FMvPolynomial n R) : Prop :=
-  normalize f = normalize g
-
-/-- Embed a numeric literal `k` as the constant polynomial `C k`. -/
-instance instOfNat {k : ℕ} [OfNat R k] :
-    OfNat (FMvPolynomial n R) k :=
-  ⟨C (OfNat.ofNat k)⟩
 
 end FMvPolynomial

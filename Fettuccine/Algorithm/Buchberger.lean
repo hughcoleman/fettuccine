@@ -29,8 +29,8 @@ def sPolynomial (ord : FMonomialOrder n) (f g : FMvPolynomial n R) : FMvPolynomi
     -- These divisions necessarily always succeed because the lowest common multiple is
     -- definitionally divisible by both.
     let lcm := FMonomial.lcm lm_f lm_g
-    let mf  := (lcm.divide lm_f).getD (FMonomial.zero n)
-    let mg  := (lcm.divide lm_g).getD (FMonomial.zero n)
+    let mf  := (lcm.div lm_f).getD (FMonomial.zero n)
+    let mg  := (lcm.div lm_g).getD (FMonomial.zero n)
     sub (mulMonomial mf lc_g f) (mulMonomial mg lc_f g)
   | _, _ =>
     -- If either polynomial is zero, the S-polynomial is conventionally taken to be zero. (This
@@ -152,7 +152,7 @@ where
       -- zeroes out of the basis.
       match f.leadingTerm ord, g.leadingTerm ord with
       | some (lm_f, lc_f), some (lm_g, lc_g) =>
-        if lm_f.isRelativelyPrime lm_g then
+        if lm_f.isCoprime lm_g then
           -- If the leading monomials are relatively prime, then the S-polynomial is guaranteed to
           -- reduce to zero (regardless of the choice of monomial order), due to a theorem of
           -- Buchberger. So, in this case, we can immediately move on.
@@ -166,8 +166,8 @@ where
             -- The coefficient representation of the S-polynomial of `f` and `g` can be computed
             -- as in `sPolynomial`.
             let lcm := FMonomial.lcm lm_f lm_g
-            let mf  := (lcm.divide lm_f).getD (FMonomial.zero n)
-            let mg  := (lcm.divide lm_g).getD (FMonomial.zero n)
+            let mf  := (lcm.div lm_f).getD (FMonomial.zero n)
+            let mg  := (lcm.div lm_g).getD (FMonomial.zero n)
             let vs  := (vf.mulMonomial mf lc_g).sub (vg.mulMonomial mg lc_f)
             -- We can then subtract off the quotients of the reduction in order to find the
             -- coefficient representation of the remainder.
@@ -195,23 +195,41 @@ where
 section Examples
 
 private abbrev S := FMvPolynomial 3 ℚ
+private abbrev m (a b c : ℕ) : FMonomial 3 :=
+  Vector.mk #[a, b, c] (by simp)
 
--- A small helper for generating monomials.
-private def m (a b c : ℕ) : FMonomial 3 :=
-  { data := #[a, b, c], hsize := by simp }
+set_option linter.style.nativeDecide false
 
+-- I₁ = (xy - 1, x² - y)
 private def f₁ : S := #[(m 1 1 0, 1), (m 0 0 0, -1)] -- xy - 1
 private def f₂ : S := #[(m 2 0 0, 1), (m 0 1 0, -1)] -- x² - y
-private def gb : CandidateGroebnerBasis 3 ℚ :=
+private def gb₁ : CandidateGroebnerBasis 3 ℚ :=
   untrustedBuchberger' FMonomialOrder.lex #[f₁, f₂]
-#eval gb.G
 
+-- This is not a reduced Gröbner basis, but this is a Gröbner basis nonetheless as can be confirmed
+-- by Macaulay2.
+example : gb₁.G = #[
+      f₁, f₂,
+      #[(m 1 0 0, -1), (m 0 2 0, 1)], -- -x + y²
+      #[(m 0 3 0, -1), (m 0 0 0, 1)], -- -y³ + 1
+    ] := by
+  decide +native
+
+-- I₂ = (xy - z, xz - y, yz - x)
 private def g₁ : S := #[(m 1 1 0, 1), (m 0 0 1, -1)] -- xy - z
 private def g₂ : S := #[(m 1 0 1, 1), (m 0 1 0, -1)] -- xz - y
-private def g₃ : S := #[(m 0 1 1, 1), (m 1 0 0, -1)] -- yz - x
-private def gb' : CandidateGroebnerBasis 3 ℚ :=
+private def g₃ : S := #[(m 1 0 0, -1), (m 0 1 1, 1)] -- -x + yz
+private def gb₂ : CandidateGroebnerBasis 3 ℚ :=
   untrustedBuchberger' FMonomialOrder.grevlex #[g₁, g₂, g₃]
-#eval gb'.G
+
+-- This one is in fact the reduced Gröbner basis, which can be confirmed by Macaulay2.
+example : gb₂.G = #[
+      g₁, g₂, g₃,
+      #[(m 0 2 0, 1), (m 0 0 2, -1)], -- y² - z²
+      #[(m 2 0 0, 1), (m 0 0 2, -1)], -- x² - z²
+      #[(m 0 0 3, 1), (m 0 0 1, -1)], -- z³ - z
+    ] := by
+  native_decide
 
 end Examples
 

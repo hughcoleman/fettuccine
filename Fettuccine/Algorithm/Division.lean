@@ -18,22 +18,13 @@ namespace FMonomial
 variable {n : ℕ}
 
 /-- A decidable predicate for monomial divisibility. -/
--- [FUTURE-FIXME]: Eliminate the usage of `Id.run`.
 def dvd (m₁ m₂ : FMonomial n) : Bool :=
-  Id.run do
-    for i in [:n] do
-      if !(Nat.ble (m₁.data.getD i 0) (m₂.data.getD i 0)) then
-        return false
-    return true
+  Vector.zipWith Nat.ble m₁ m₂ |>.all id
 
 /-- Divide the monomial `m₁` by `m₂`, if possible. -/
--- [FUTURE-FIXME]: Rename this to `div`.
-def divide (m₁ m₂ : FMonomial n) : Option (FMonomial n) :=
+def div (m₁ m₂ : FMonomial n) : Option (FMonomial n) :=
   if dvd m₂ m₁ then
-    some {
-      data  := Array.zipWith (· - ·) m₁.data m₂.data
-      hsize := by simp [m₁.hsize, m₂.hsize]
-    }
+    some <| Vector.zipWith Nat.sub m₁ m₂
   else
     none
 
@@ -65,7 +56,7 @@ where
         match g.leadingTerm ord with
         | none              => pure PUnit.unit
         | some (lm_g, lc_g) =>
-          match FMonomial.divide lm_f lm_g with
+          match FMonomial.div lm_f lm_g with
           | none   => pure PUnit.unit
           | some m => return some (i, g, lc_g, m)
       return none
