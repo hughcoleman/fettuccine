@@ -46,3 +46,5 @@ example : Groebner.IsGroebnerBasis CMonomialOrder.GrevlexOrder I gb.basis :=
 #eval gb.basis
 -- [yx + -1*z, zx + -1*y, -1*x + zy, y^2 + -1*z^2, x^2 + -1*z^2, z^3 + -1*z]
 ```
+
+This is, in fact, a reduced Gr&ouml;bner basis---but in general this implementation does not always produce a reduced basis.
