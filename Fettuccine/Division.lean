@@ -101,15 +101,22 @@ variable {R : Type*} [DecidableEq R] [Field R]
 
 namespace CMvPolynomial
 
-section Single
-
 variable {tag : Type*} [CMonomialOrder.MonomialOrderTag tag σ]
 
-private abbrev taggedOrder {σ : Type*} [DecidableEq σ]
-    {tag : Type*} [CMonomialOrder.MonomialOrderTag tag σ] : CMonomialOrder σ :=
+-- Lift the monomial order out of the `tag` parameter.
+private abbrev taggedOrder : CMonomialOrder σ :=
   CMonomialOrder.MonomialOrderTag.ord (tag := tag) (σ := σ)
 
 local notation "ord" => taggedOrder (tag := tag) (σ := σ)
+
+-- Instantiate instances of `LinearOrder` and `WellFoundedRelation` on `ord.syn` so that the
+-- termination measure for `mvDivide` is interpreted correctly.
+local instance : LinearOrder         (ord).syn := (ord).lo
+local instance : WellFoundedRelation (ord).syn where
+  rel := (· < ·)
+  wf  := (ord).wf.wf
+
+section Single
 
 /-- The statement that a given pair of polynomial form a (the) quotient and remainder of a
     particular multivariate polynomial division. -/
@@ -159,39 +166,27 @@ theorem IsMvQuotientRemainder_unique {f g q₁ q₂ r₁ r₂ : CMvPolynomial σ
   · exact (h₁.2 _ hr₁) hdiv
   · exact (h₂.2 _ hr₂) hdiv
 
--- Instantiate instances of `LinearOrder` and `WellFoundedRelation` on `ord.syn` so that the
--- termination measure for `mvDivide` is interpreted correctly.
-local instance : LinearOrder (taggedOrder (tag := tag) (σ := σ)).syn :=
-  (taggedOrder (tag := tag) (σ := σ)).lo
-local instance : WellFoundedRelation (taggedOrder (tag := tag) (σ := σ)).syn where
-  rel := (· < ·)
-  wf  := (taggedOrder (tag := tag) (σ := σ)).wf.wf
-
-namespace mvDivide
-
 /-- The metric type for `mvDivide`, which consists of the leading monomial paired with the
     cardinality of its support. -/
-abbrev Metric : Type _ := (taggedOrder (tag := tag) (σ := σ)).syn × Nat
+abbrev Metric := (ord).syn × Nat
 
 /-- The lexicographic relation used by the `mvDivide` termination metric. -/
 abbrev MetricRel : Metric (tag := tag) (σ := σ) → Metric (tag := tag) (σ := σ) → Prop :=
   Prod.Lex (fun x1 x2 => x1 < x2) (fun a₁ a₂ => a₁ < a₂)
 
 /-- The termination metric for `mvDivide`. -/
-def metric (f : CMvPolynomial σ R) : Metric (tag := tag) (σ := σ) :=
+def measure (f : CMvPolynomial σ R) : Metric (tag := tag) (σ := σ) :=
   ((ord).toSyn in[ord](f), f.support.card)
-
-end mvDivide
 
 /-- If two polynomials have the same leading terms, then their difference has a strictly smaller
     leading term (with respect to the lexicographic measure). -/
 private lemma metric_sub_lt_of_same_leadingTerm (f h : CMvPolynomial σ R) (hf : f ≠ 0)
     (hlm : in[ord](h) = in[ord](f))
     (hlc : leadingCoefficient ord h = leadingCoefficient ord f) :
-    mvDivide.MetricRel (tag := tag) (mvDivide.metric (tag := tag) (f - h))
-      (mvDivide.metric (tag := tag) f) := by
+    MetricRel (tag := tag) (measure (tag := tag) (f - h))
+      (measure (tag := tag) f) := by
   -- [TO-REVIEW]
-  unfold mvDivide.MetricRel mvDivide.metric
+  unfold MetricRel measure
   rw [Prod.lex_def]
   have hs : (f - h).support ⊆ f.support ∪ h.support :=
     support_sub_subset (f := f) (g := h)
@@ -241,9 +236,9 @@ private lemma metric_sub_lt_of_same_leadingTerm (f h : CMvPolynomial σ R) (hf :
 /-- Decrease lemma for the `none` branch of `mvDivide`. -/
 lemma mvDivide_decreases_none_branch (f g : CMvPolynomial σ R) (hf : f ≠ 0)
   (_hm : CMonomial.div in[ord](f) in[ord](g) = none) :
-    mvDivide.MetricRel (tag := tag)
-      (mvDivide.metric (tag := tag) (f - leadingTerm ord f))
-      (mvDivide.metric (tag := tag) f) := by
+    MetricRel (tag := tag)
+      (measure (tag := tag) (f - leadingTerm ord f))
+      (measure (tag := tag) f) := by
   -- [TO-REVIEW]
   have hf_coeff : leadingCoefficient ord f ≠ 0 :=
     CMvPolynomial.leadingCoefficient_ne_zero ord f hf
@@ -268,9 +263,9 @@ lemma mvDivide_decreases_none_branch (f g : CMvPolynomial σ R) (hf : f ≠ 0)
 lemma mvDivide_decreases_some_branch (f g : CMvPolynomial σ R) (hf : f ≠ 0) (hg : g ≠ 0)
     (m : CMonomial σ) (hm : CMonomial.div in[ord](f) in[ord](g) = some m) :
     let c := CMvPolynomial.ofMonomial m (leadingCoefficient ord f / leadingCoefficient ord g)
-    mvDivide.MetricRel (tag := tag)
-      (mvDivide.metric (tag := tag) (f - c * g))
-      (mvDivide.metric (tag := tag) f) := by
+    MetricRel (tag := tag)
+      (measure (tag := tag) (f - c * g))
+      (measure (tag := tag) f) := by
   -- [TO-REVIEW]
   classical
   dsimp
@@ -344,9 +339,9 @@ lemma mvDivide_decreases_some_branch (f g : CMvPolynomial σ R) (hf : f ≠ 0) (
 
 lemma mvDivide_decreases_none_branch' (f g : CMvPolynomial σ R) (hf : f ≠ 0)
   (hm : CMonomial.div in'[ord](f) in'[ord](g) = none) :
-    mvDivide.MetricRel (tag := tag)
-      (mvDivide.metric (tag := tag) (f - leadingTerm' ord f))
-      (mvDivide.metric (tag := tag) f) := by
+    MetricRel (tag := tag)
+      (measure (tag := tag) (f - leadingTerm' ord f))
+      (measure (tag := tag) f) := by
   have hm_old : CMonomial.div in[ord](f) in[ord](g) = none := by
     simpa only [← leadingMonomial_eq_leadingMonomial' ord f,
       ← leadingMonomial_eq_leadingMonomial' ord g] using hm
@@ -357,9 +352,9 @@ lemma mvDivide_decreases_some_branch' (f g : CMvPolynomial σ R) (hf : f ≠ 0) 
     (m : CMonomial σ) (hm : CMonomial.div in'[ord](f) in'[ord](g) = some m) :
     let c := CMvPolynomial.ofMonomial m
       (leadingCoefficient' ord f / leadingCoefficient' ord g)
-    mvDivide.MetricRel (tag := tag)
-      (mvDivide.metric (tag := tag) (f - c * g))
-      (mvDivide.metric (tag := tag) f) := by
+    MetricRel (tag := tag)
+      (measure (tag := tag) (f - c * g))
+      (measure (tag := tag) f) := by
   have hm_old : CMonomial.div in[ord](f) in[ord](g) = some m := by
     simpa only [← leadingMonomial_eq_leadingMonomial' ord f,
       ← leadingMonomial_eq_leadingMonomial' ord g] using hm
@@ -385,7 +380,7 @@ def mvDivide (f g : CMvPolynomial σ R) (hg : g ≠ 0) : CMvPolynomial σ R × C
       let lt_f   := leadingTerm' ord f
       let ⟨q, r⟩ := mvDivide (f - lt_f) g hg
       (q, r + lt_f)
-termination_by mvDivide.metric (tag := tag) f
+termination_by measure (tag := tag) f
 decreasing_by
   · exact mvDivide_decreases_some_branch' (tag := tag) f g hf hg m hm
   · exact mvDivide_decreases_none_branch' (tag := tag) f g hf hm
