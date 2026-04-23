@@ -134,7 +134,7 @@ structure GroebnerBasis
 
 The fast algorithm is fuel-bounded and untrusted, so this returns `none` if the transported witness
 does not pass the `CMvPolynomial` checker. -/
-def buchberger
+@[inline] def buchberger
     (tag : Type)
     [CMonomialOrder.CMonomialOrderTag tag (Fin n)]
     [CMonomialOrder.FMonomialOrderTag tag n]
