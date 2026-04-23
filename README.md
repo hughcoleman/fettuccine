@@ -3,10 +3,21 @@
 _"It looks like one of those noodles... fettuccine?"_
 
 A mostly-executable, self-certifying implementation of Buchberger's algorithm.
-It is implemented in Lean 4.29, and, other than Mathlib 4.29, has no external dependencies.
 
 > [!CAUTION]
 > For entirely unknown reasons, this implementation sometimes unpredictably segfaults Lean, especially when working with the grlex or grevlex monomial orders.
+
+## Building
+
+Fettuccine is built with Lean 4.29.0, as specified in `lean-toolchain`.
+It depends only on Mathlib 4.29.
+
+To build the project, run:
+
+```sh
+lake exe cache get
+lake build Fettuccine.Examples
+```
 
 ## Example
 
