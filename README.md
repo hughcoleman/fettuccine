@@ -80,18 +80,18 @@ Here, we also develop `leadingMonomial`, `leadingCoefficient`, and `leadingTerm`
 It defines S-polynomials (as `sPolynomial` and `sPolynomial'`), reduction predicates such as `ReducesToZero`, the generated ideal `idealOf`, and the predicate `IsGroebnerBasis`.
 This is the interface against which computed candidate bases are checked.
 
-### Fast, Executable Layer
+### Fast, Executable Buchberger's Algorithm
 
 The `Fettuccine/Algorithm/` folder contains the fast array-based implementation intended for `#eval` and `native_decide`.
 Here, monomials and polynomials are represented by `FMonomial` and `FMvPolynomial`, together with executable monomial orders in [FMonomialOrder.lean](Fettuccine/Algorithm/FMonomialOrder.lean), executable division in [Division.lean](Fettuccine/Algorithm/Division.lean), and Buchberger's algorithm in [Buchberger.lean](Fettuccine/Algorithm/Buchberger.lean).
 It provides `untrustedBuchberger`.
 
-### Bridging Interface
+### Bridging and Certification
 
 [Buchberger.lean](Fettuccine/Buchberger.lean) bridges the fast layer and the mathematical layer by converting between `CMvPolynomial` and `FMvPolynomial`, re-packaging witnesses, and exposing the proof-bearing `GroebnerBasis` structure together with the user-facing `buchberger` function.
 [Repr.lean](Fettuccine/Repr.lean) supplies readable output for examples, and [Examples.lean](Fettuccine/Examples.lean) demonstrates a handful of worked computations.
 
-### Formalized Multivariate Polynomial Division
+### Multivariate Polynomial Division Theory
 
 [Division.lean](Fettuccine/Division.lean) develops the formal theory of multivariate polynomial division for `CMvPolynomial`.
 It defines monomial divisibility `dvd`, quotient computation `div`, the specification `IsMvQuotientRemainder`, the division algorithm `mvDivide`, and its correctness theorem `mvDivide_spec`.
