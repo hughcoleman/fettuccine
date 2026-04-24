@@ -48,8 +48,8 @@ def x : CMvPolynomial σ ℚ := CMvPolynomial.X 0
 def y : CMvPolynomial σ ℚ := CMvPolynomial.X 1
 def z : CMvPolynomial σ ℚ := CMvPolynomial.X 2
 
-def I : List (CMvPolynomial σ ℚ) := [x * y - z, x * z - y, y * z - x]
-def gb? : Option (Buchberger.GroebnerBasis I CMonomialOrder.GrevlexOrder) :=
+def I : List (CMvPolynomial σ ℚ) := [x*y - z, x*z - y, y*z - x]
+def gb? : Option (Buchberger.GroebnerBasis CMonomialOrder.GrevlexOrder I) :=
   Buchberger.buchberger _ I 32
 def gb := gb?.get (by native_decide)
 
@@ -62,7 +62,7 @@ example : Groebner.IsGroebnerBasis CMonomialOrder.GrevlexOrder I gb.basis :=
 This produces:
 
 ```
-[yx + -1*z, zx + -1*y, -1*x + zy, y^2 + -1*z^2, x^2 + -1*z^2, z^3 + -1*z]
+[y*x + -1*z, z*x + -1*y, -1*x + z*y, y^2 + -1*z^2, x^2 + -1*z^2, z^3 + -1*z]
 ```
 
 In fact, this happens to be a reduced Gr&ouml;bner basis&mdash;but, in general, this implementation does not always produce a reduced basis.
