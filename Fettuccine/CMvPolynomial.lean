@@ -49,6 +49,10 @@ def X (i : σ) : CMonomial σ := DFinsupp.single i 1
 /-- The degree of a monomial is the sum of its exponents. -/
 def degree (m : CMonomial σ) : ℕ := m.support.sum (m ·)
 
+/-- The degree of the monomial `xᵢ` is 1. -/
+lemma degree_X (i : σ) : CMonomial.degree (CMonomial.X i) = 1 := by
+  simp [CMonomial.degree, CMonomial.X]
+
 lemma sum_union_support_eq (m : CMonomial σ) (t : Finset σ) :
     (m.support ∪ t).sum (fun i => m i) = m.support.sum (fun i => m i) := by
   classical
@@ -84,6 +88,16 @@ def isSquarefree (m : CMonomial σ) : Prop :=
 def lcm (m₁ m₂ : CMonomial σ) : CMonomial σ :=
   DFinsupp.zipWith (fun _ a b => max a b) (fun _ => by simp) m₁ m₂
 
+/-- The least common multiple of two monomials is commutative. -/
+lemma lcm_comm (m₁ m₂ : CMonomial σ) : CMonomial.lcm m₁ m₂ = CMonomial.lcm m₂ m₁ := by
+  ext i
+  simp [CMonomial.lcm, max_comm]
+
+/-- The least common multiple of a monomial with itself is the monomial. -/
+lemma lcm_self (m : CMonomial σ) : CMonomial.lcm m m = m := by
+  ext i
+  simp [CMonomial.lcm]
+
 end CMonomial
 
 open DirectSum
@@ -108,9 +122,26 @@ def C (a : R) : CMvPolynomial σ R :=
 def ofMonomial (m : CMonomial σ) (a : R) : CMvPolynomial σ R :=
   DirectSum.of (fun _ => R) m a
 
+omit [DecidableEq R] in
+/-- A constant polynomial can be formed by taking the zero monomial with an appropriate scalar. -/
+@[simp] lemma C_eq_ofMonomial_zero (a : R) : C (σ := σ) a = ofMonomial (σ := σ) 0 a := by
+  rfl
+
 /-- The coefficient of monomial `m` in polynomial `f`. -/
 @[simp] def coefficientOf (f : CMvPolynomial σ R) (m : CMonomial σ) : R :=
   f m
+
+omit [DecidableEq R] in
+/-- The coefficient of a monomial in a monomial polynomial is the monomial's coefficient. -/
+@[simp] lemma coefficientOf_ofMonomial (m : CMonomial σ) (a : R) :
+    coefficientOf (ofMonomial m a) m = a := by
+  simp [ofMonomial, coefficientOf, DirectSum.of_eq_same]
+
+omit [DecidableEq R] in
+/-- Monomial polynomials are monomial. -/
+@[simp] lemma coefficientOf_ofMonomial_of_ne {m n : CMonomial σ} (h : n ≠ m) (a : R) :
+    coefficientOf (ofMonomial m a) n = 0 := by
+  simp [ofMonomial, coefficientOf, DirectSum.of_eq_of_ne, h]
 
 /-- The support of a monomial polynomial is singleton. -/
 lemma support_ofMonomial (m : CMonomial σ) (a : R) (ha : a ≠ 0) :
@@ -132,6 +163,17 @@ lemma support_ofMonomial (m : CMonomial σ) (a : R) (ha : a ≠ 0) :
     m ∈ f.support ↔ f m ≠ 0 := by
   simp only [DFinsupp.mem_support_toFun, ne_eq]
 
+/-- A constant polynomial has trivial support. -/
+lemma support_C_subset (a : R) : (C (σ := σ) a).support ⊆ {0} := by
+  intro m hm
+  have hm' : (C (σ := σ) a) m ≠ 0 :=
+    (mem_support_iff (f := C (σ := σ) a) m).mp hm
+  by_contra hne
+  have hne' : m ≠ 0 := by simpa using hne
+  have hz : (C (σ := σ) a) m = 0 := by
+    simp [C, DirectSum.of_eq_of_ne, hne']
+  exact hm' hz
+
 /-- The support of a sum of two polynomials is contained in the union of the supports of the
     summands. -/
 lemma support_add_subset (f g : CMvPolynomial σ R) : (f + g).support ⊆ f.support ∪ g.support := by
@@ -139,7 +181,7 @@ lemma support_add_subset (f g : CMvPolynomial σ R) : (f + g).support ⊆ f.supp
 
 /-- The support of a product two of polynomials is contained in the "Cartesian" product of the
     supports of its factors. -/
-lemma support_mul_subset (f g : CMvPolynomial σ R) :
+theorem support_mul_subset (f g : CMvPolynomial σ R) :
     (f * g).support ⊆ Finset.image₂ (· + ·) f.support g.support := by
   classical
   -- We can express the product `f * g` as a sum over all pairs of monomials in the supports of `f`
@@ -206,8 +248,8 @@ variable {R : Type*} [DecidableEq R] [CommRing R]
 /-- The support of a difference of two polynomials is contained in the union of the supports of both
     summands. -/
 lemma support_sub_subset (f g : CMvPolynomial σ R) : (f - g).support ⊆ f.support ∪ g.support := by
-  -- For some reason this needs to be made explicit; `DFinsupp.support_neg` doesn't match. Possibly
-  -- because of variable names?
+  -- For some reason this needs to be made explicit; `DFinsupp.support_neg` doesn't match with `rw`
+  -- or `simp`. Not sure why... conflicting variable names?
   have hneg : (-g).support = g.support :=
     DFinsupp.support_neg (f := g)
   simpa [sub_eq_add_neg, hneg] using support_add_subset f (-g)

@@ -185,6 +185,10 @@ lemma leadingMonomial_monomial (m : CMonomial σ) (a : R) (ha : a ≠ 0) :
     in[ord](CMvPolynomial.ofMonomial m a) = m := by
   simp [leadingMonomial, CMvPolynomial.support_ofMonomial m a ha]
 
+/-- The leading monomial of a constant polynomial is zero. -/
+lemma leadingMonomial_C (a : R) (ha : a ≠ 0) : leadingMonomial ord (C a) = 0 := by
+  simpa [C] using (leadingMonomial_monomial _ _ _ ha)
+
 /-- The leading monomial of a sum is an element of the supports of the summands. -/
 lemma leadingMonomial_add_mem (f g : CMvPolynomial σ R) (h : f + g ≠ 0) :
     in[ord](f + g) ∈ f.support ∪ g.support := by
@@ -226,6 +230,15 @@ lemma leadingMonomial_mul_le (f g : CMvPolynomial σ R) :
 @[simp] def leadingCoefficient (f : CMvPolynomial σ R) : R :=
   CMvPolynomial.coefficientOf f in[ord](f)
 
+@[simp] lemma leadingCoefficient_zero : leadingCoefficient ord (0 : CMvPolynomial σ R) = 0 := by
+  simp [leadingCoefficient]
+
+/-- The leading coefficient of a monomial is its scalar. -/
+lemma leadingCoefficient_monomial (m : CMonomial σ) (a : R) (ha : a ≠ 0) :
+    leadingCoefficient ord (ofMonomial m a) = a := by
+  rw [leadingCoefficient, leadingMonomial_monomial _ _ _ ha]
+  simp [coefficientOf, ofMonomial, DirectSum.of_eq_same]
+
 /-- A nonzero polynomial has nonzero leading coefficient. -/
 lemma leadingCoefficient_ne_zero (f : CMvPolynomial σ R) (hf : f ≠ 0) :
     leadingCoefficient ord f ≠ 0 := by
@@ -234,6 +247,15 @@ lemma leadingCoefficient_ne_zero (f : CMvPolynomial σ R) (hf : f ≠ 0) :
 /-- The **leading term** of a polynomial is the leading monomial alongside its coefficient. -/
 @[simp] def leadingTerm (f : CMvPolynomial σ R) : CMvPolynomial σ R :=
   CMvPolynomial.ofMonomial in[ord](f) (leadingCoefficient ord f)
+
+/-- The leading term of the zero polynomial is zero. -/
+@[simp] lemma leadingTerm_zero : leadingTerm ord (0 : CMvPolynomial σ R) = 0 := by
+  simp [leadingTerm, ofMonomial, leadingCoefficient]
+
+/-- The leading term of a monomial is the monomial itself. -/
+lemma leadingTerm_monomial (m : CMonomial σ) (a : R) (ha : a ≠ 0) :
+    leadingTerm ord (ofMonomial m a) = ofMonomial m a := by
+  rw [leadingTerm, leadingMonomial_monomial _ _ _ ha, leadingCoefficient_monomial _ _ _ ha]
 
 /-- The coefficient of the product at the sum of leading monomials is the product of leading
     coefficients. -/
@@ -466,10 +488,9 @@ universe u v
 class CMonomialOrderTag (tag : Type v) (σ : Type u) [DecidableEq σ] where
   ord : CMonomialOrder.{u, u} σ
 
-/-- The fast implementation corresponding to a type-level monomial-order tag.
-
-This is used only to choose the array-backed order passed to the untrusted computation layer. The
-trusted statement remains phrased in terms of `CMonomialOrder`. -/
+/-- A type-level tag for a fast monomial order. -/
+-- This is primarily used to automatically select, leveraging typeclass inference, the appropriate
+-- array-backed order to pass to the untrusted computation layer.
 class FMonomialOrderTag (tag : Type v) (n : ℕ) where
   ord : FMonomialOrder n
 

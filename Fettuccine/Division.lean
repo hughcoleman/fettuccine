@@ -6,6 +6,10 @@ import Fettuccine.CMvPolynomial
 
 This file defines the division algorithm for `CMvPolynomial σ R` with respect to a monomial order.
 
+It is, not required by any of the other code in this library, as it regularly segfaults upon
+execution. However, it does contain some quite challenging proofs, and thus it was decided that it
+should be kept in the library for posterity's sake.
+
 ## Definitions
 
 * `IsMvQuotientRemainder ord f g q r` : the definition of division of `f` by
@@ -183,7 +187,8 @@ private lemma metric_sub_lt_of_same_leadingTerm (f h : CMvPolynomial σ R) (hf :
     (hlc : leadingCoefficient ord h = leadingCoefficient ord f) :
     MetricRel ord (measure ord (f - h))
       (measure ord f) := by
-  -- [TO-REVIEW]
+  -- FIXME: This proof was written with a lot of help from AI, and is pretty unreadable. Can we
+  -- clean it up a bunch?
   unfold MetricRel measure
   rw [Prod.lex_def]
   have hs : (f - h).support ⊆ f.support ∪ h.support :=
@@ -239,7 +244,8 @@ lemma mvDivide_decreases_none_branch (f g : CMvPolynomial σ R) (hf : f ≠ 0)
     MetricRel ord
       (measure ord (f - leadingTerm ord f))
       (measure ord f) := by
-  -- [TO-REVIEW]
+  -- FIXME: This proof was written with a lot of help from AI, and is pretty unreadable. Can we
+  -- clean it up a bunch?
   have hf_coeff : leadingCoefficient ord f ≠ 0 :=
     CMvPolynomial.leadingCoefficient_ne_zero ord f hf
   have hlm : in[ord](leadingTerm ord f) = in[ord](f) := by
@@ -266,7 +272,8 @@ lemma mvDivide_decreases_some_branch (f g : CMvPolynomial σ R) (hf : f ≠ 0) (
     MetricRel ord
       (measure ord (f - c * g))
       (measure ord f) := by
-  -- [TO-REVIEW]
+  -- FIXME: This proof was written with a lot of help from AI, and is pretty unreadable. Can we
+  -- clean it up a bunch?
   classical
   dsimp
   have hf_coeff : leadingCoefficient ord f ≠ 0 :=
@@ -383,7 +390,8 @@ private lemma mvDivide_br_accumulating (f g : CMvPolynomial σ R) (hg : g ≠ 0)
 theorem mvDivide_spec (f g : CMvPolynomial σ R) (hg : g ≠ 0) :
     let (q, r) := mvDivide ord f g hg
     IsMvQuotientRemainder ord f g q r := by
-  -- [TO-REVIEW]
+  -- FIXME: This proof was written with a lot of help from AI, and is pretty unreadable. Can we
+  -- clean it up a bunch?
   classical
   let motive : CMvPolynomial σ R → Prop := fun x =>
     let (q, r) := mvDivide ord x g hg

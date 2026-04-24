@@ -6,6 +6,7 @@ A mostly-executable, self-certifying implementation of Buchberger's algorithm.
 
 > [!CAUTION]
 > For entirely unknown reasons, this implementation sometimes unpredictably segfaults Lean, especially when working with the grlex or grevlex monomial orders.
+> It is recommended that you use build and execute files through the command-line, instead of VS Code.
 
 ## Building
 
@@ -43,11 +44,11 @@ instance : Repr σ where
 
 open CMvPolynomial CMonomialOrder
 
-def x : CMvPolynomial σ Rat := CMvPolynomial.X 0
-def y : CMvPolynomial σ Rat := CMvPolynomial.X 1
-def z : CMvPolynomial σ Rat := CMvPolynomial.X 2
+def x : CMvPolynomial σ ℚ := CMvPolynomial.X 0
+def y : CMvPolynomial σ ℚ := CMvPolynomial.X 1
+def z : CMvPolynomial σ ℚ := CMvPolynomial.X 2
 
-def I : List (CMvPolynomial σ Rat) := [x * y - z, x * z - y, y * z - x]
+def I : List (CMvPolynomial σ ℚ) := [x * y - z, x * z - y, y * z - x]
 def gb? : Option (Buchberger.GroebnerBasis I CMonomialOrder.GrevlexOrder) :=
   Buchberger.buchberger _ I 32
 def gb := gb?.get (by native_decide)

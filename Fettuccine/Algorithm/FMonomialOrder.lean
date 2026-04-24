@@ -1,8 +1,10 @@
 import Fettuccine.Algorithm.FMvPolynomial
-import Mathlib.Algebra.Field.Rat
+import Mathlib.Algebra.Group.Basic
+import Mathlib.Algebra.Group.Nat.Defs
+import Mathlib.Logic.Equiv.Array
 
 /-!
-# Fast Monomial Orders
+# "Fast" Monomial Orders
 
 This file defines three standard monomial orders on `FMonomial`, given as comparison functions of
 type `FMonomial n → FMonomial n → Ordering`.
@@ -100,6 +102,63 @@ def leadingMonomial (ord : FMonomialOrder n) : Option (FMonomial n) :=
 def leadingCoefficient (ord : FMonomialOrder n) : Option R :=
   (f.leadingTerm ord).map Prod.snd
 
+/-- The leading term of `f` is none if and only if `f` is the zero polynomial. -/
+theorem leadingTerm_none_iff (ord : FMonomialOrder n) (f : FMvPolynomial n R) :
+    f.leadingTerm ord = none ↔ f = #[] := by
+  let step : Option (FMonomial n × R) → (FMonomial n × R) → Option (FMonomial n × R) :=
+    fun lt (m, c) =>
+      match lt with
+      | none          => some (m, c)
+      | some (m', c') =>
+        if ord m m' == .gt then some (m, c) else some (m', c')
+  -- Folding `step` with an non-none accumulator produces a non-none result.
+  have hfold_some :
+      ∀ (l : List (FMonomial n × R)) (lt : Option (FMonomial n × R)),
+        lt ≠ none → List.foldl step lt l ≠ none := by
+    intro l
+    induction l with
+    | nil => intro lt hlt; simpa [step]
+    | cons a l ih =>
+      intro lt hlt
+      -- A single step doesn't produce a none result.
+      have hstep : step lt a ≠ none := by
+        cases lt with
+        | none     => simp [step]
+        | some val =>
+          simp [step]; cases ord _ _ <;> simp
+      exact ih _ hstep
+  -- Express the leading term as a list-based fold, so that we can apply the previous theorems.
+  unfold leadingTerm
+  rw [← Array.foldl_toList]
+  cases h : f.toList with
+  | nil =>
+    -- In this case, the goal reduces to `true ↔ true`, which is true.
+    have hf : f = #[] :=
+      (Equiv.arrayEquivList _).injective <| by simpa using h
+    simp [hf]
+  | cons a l =>
+    have hf : f ≠ #[] := by
+      intro hf
+      simp [hf] at h
+    have hsome : List.foldl step (some a) l ≠ none :=
+      hfold_some l (some a) (by simp)
+    -- We get a contradiction either way we look.
+    constructor
+    · intro hnone
+      have hnone' : List.foldl step (some a) l = none := by
+        simpa [step] using hnone
+      contradiction
+    · intro hf'
+      exact (hf hf').elim
+
+lemma leadingMonomial_none_iff (ord : FMonomialOrder n) (f : FMvPolynomial n R) :
+    f.leadingMonomial ord = none ↔ f = #[] := by
+  simp [leadingMonomial, leadingTerm_none_iff]
+
+lemma leadingCoefficient_none_iff (ord : FMonomialOrder n) (f : FMvPolynomial n R) :
+    f.leadingCoefficient ord = none ↔ f = #[] := by
+  simp [leadingCoefficient, leadingTerm_none_iff]
+
 end LeadingMonomial
 
 variable [DecidableEq R] [Zero R] [AddMonoid R]
@@ -125,9 +184,20 @@ where
       else
         acc.push (m, c)
 
+lemma normalize_zero : normalize (n := n) (R := R) zero = zero := by
+  rfl
+
 /-- Add two multivariate polynomials. -/
 def add (f g : FMvPolynomial n R) : FMvPolynomial n R :=
   normalize (f ++ g)
+
+lemma add_zero (f : FMvPolynomial n R) :
+    add f zero = normalize f := by
+  simp [add, FMvPolynomial.zero]
+
+lemma zero_add (f : FMvPolynomial n R) :
+    add zero f = normalize f := by
+  simp [add, FMvPolynomial.zero]
 
 /-- Subtract a multivariate polynomial from another. -/
 def sub [AddGroup R] (f g : FMvPolynomial n R) : FMvPolynomial n R :=
@@ -141,5 +211,9 @@ def mulMonomial [Mul R] (m : FMonomial n) (c : R)
 /-- Multiply two multivariate polynomials. -/
 def mul [Mul R] (f g : FMvPolynomial n R) : FMvPolynomial n R :=
   f.foldl (init := #[]) fun acc (m, c) => add acc (mulMonomial m c g)
+
+lemma zero_mul [Mul R] (f : FMvPolynomial n R) :
+    mul zero f = zero := by
+  simp [mul, FMvPolynomial.zero]
 
 end FMvPolynomial

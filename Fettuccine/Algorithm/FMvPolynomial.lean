@@ -1,10 +1,11 @@
-import Mathlib.Algebra.Group.Basic
+import Mathlib.Data.List.OfFn
 
 /-!
-# Fast Multivariate Polynomials
+# "Fast" Multivariate Polynomials
 
 This file defines the types `FMonomial n` and `FMvPolynomial n R`, which are primitive
-representations of monomials (`CMonomial σ`) and multivariate polynomials (`CMvPolynomial σ R`).
+representations of monomials (`CMonomial σ`) and multivariate polynomials (`CMvPolynomial σ R`) in
+finitely many variables over rings.
 
 ## Definitions
 
@@ -42,15 +43,41 @@ def degree (m : FMonomial n) : ℕ := m.toArray.foldl (· + ·) 0
 def add (m₁ m₂ : FMonomial n) : FMonomial n :=
   Vector.zipWith Nat.add m₁ m₂
 
+/-- Addition is commutative. -/
+lemma add_comm (m₁ m₂ : FMonomial n) : add m₁ m₂ = add m₂ m₁ := by
+  ext i
+  simp [add, Nat.add_comm]
+
 /-- The **lowest common multiple** of two monomials, which is given by the pointwise maximum of
     exponents. -/
 def lcm (m₁ m₂ : FMonomial n) : FMonomial n :=
   Vector.zipWith Nat.max m₁ m₂
 
+/-- The `lcm` operation is commutative. -/
+lemma lcm_comm (m₁ m₂ : FMonomial n) : lcm m₁ m₂ = lcm m₂ m₁ := by
+  ext i
+  simp [lcm, Nat.max_comm]
+
+/-- The lowest common multiple of a monomial with itself is just itself. -/
+lemma lcm_self (m : FMonomial n) : lcm m m = m := by
+  ext i
+  simp [lcm]
+
 /-- Two monomials are said to be **coprime** or **relatively prime** if they share no common
     variables with positive exponents. -/
 def isCoprime (m₁ m₂ : FMonomial n) : Bool :=
   Vector.zipWith (fun a b => a == 0 || b == 0) m₁ m₂ |>.all id
+
+/-- Coprimality is a symmetric relation. -/
+lemma isCoprime_comm (m₁ m₂ : FMonomial n) : isCoprime m₁ m₂ = isCoprime m₂ m₁ := by
+  unfold isCoprime
+  -- Unfold the inner relation.
+  have h :
+      Vector.zipWith (fun a b => a == 0 || b == 0) m₁ m₂ =
+        Vector.zipWith (fun a b => a == 0 || b == 0) m₂ m₁ := by
+    ext i
+    simp [Bool.or_comm]
+  simp [h]
 
 section Examples
 
@@ -98,6 +125,14 @@ def X [One R] (i : Fin n) : FMvPolynomial n R := #[(FMonomial.X i, 1)]
 /-- The constant polynomial `a`. -/
 def C [DecidableEq R] [Zero R] (a : R) : FMvPolynomial n R :=
   if a = 0 then #[] else #[(FMonomial.zero n, a)]
+
+lemma C_zero [DecidableEq R] [Zero R] :
+    C (n := n) (R := R) 0 = zero := by
+  simp [C, zero]
+
+lemma X_ne_zero [Zero R] [One R] [NeZero (1 : R)] (i : Fin n) :
+    X (R := R) i ≠ zero := by
+  simp [X, zero]
 
 instance instOfNat [DecidableEq R] [Zero R] {k : ℕ} [OfNat R k] : OfNat (FMvPolynomial n R) k :=
   ⟨C (OfNat.ofNat k)⟩

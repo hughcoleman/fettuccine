@@ -9,7 +9,8 @@ import Mathlib.Data.DFinsupp.WellFounded
 This file provides an implementation of the graded reverse lexicographic order on monomials.
 
 For the time being, this ordering is only available for polynomial rings in finitely many variables,
-in order to simplify the implementations of the proofs.
+in order to simplify the proofs (in particular, the well-foundedness argument). It is, nonetheless,
+well-founded in the infinite case too.
 
 ## Definitions
 
@@ -211,10 +212,9 @@ theorem single_strictAnti : StrictAnti (fun (a : ι) ↦
         intro hja'
         subst hja'
         exact lt_irrefl _ hj
-      have hba : (OrderDual.toDual b : ιᵒᵈ) < OrderDual.toDual a :=
-        by
-          change a < b
-          exact h
+      have hba : (OrderDual.toDual b : ιᵒᵈ) < OrderDual.toDual a := by
+        change a < b
+        exact h
       have hbj : (OrderDual.toDual b : ιᵒᵈ) < j := lt_trans hba hj
       have hjb : j ≠ OrderDual.toDual b := by
         intro hjb'

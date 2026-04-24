@@ -61,98 +61,107 @@ end CMvPolynomial
 namespace Buchberger
 
 /-- `f` is represented by the coefficient list `cs` as a linear combination of `gs`. -/
-def IsLinearCombinationWith
-    (f : CMvPolynomial (Fin n) Rat)
-    (gs cs : List (CMvPolynomial (Fin n) Rat)) : Prop :=
+def IsLinearCombinationWith (f : CMvPolynomial (Fin n) ℚ) (gs cs : List (CMvPolynomial (Fin n) ℚ)) :
+    Prop :=
   cs.length = gs.length ∧ f = Groebner.linearCombination gs cs
 
-instance decidableIsLinearCombinationWith
-    (f : CMvPolynomial (Fin n) Rat)
-    (gs cs : List (CMvPolynomial (Fin n) Rat)) :
-    Decidable (IsLinearCombinationWith f gs cs) := by
+instance decidableIsLinearCombinationWith (f : CMvPolynomial (Fin n) ℚ)
+    (gs cs : List (CMvPolynomial (Fin n) ℚ)) : Decidable (IsLinearCombinationWith f gs cs) := by
   unfold IsLinearCombinationWith
   infer_instance
 
-/-- Raw witnesses transported back from the fast algorithm. They are not trusted until checked by
-`IsGroebnerBasisWith`. -/
+/-- The raw witnesses transported back from the fast algorithm, awaiting verification by
+    ``IsGroebnerBasisWith``. -/
 structure Witness (n : ℕ) where
-  bm : List (List (CMvPolynomial (Fin n) Rat))
-  sr : List (List (List (CMvPolynomial (Fin n) Rat)))
+  bm : List (List (CMvPolynomial (Fin n) ℚ))
+  sr : List (List (List (CMvPolynomial (Fin n) ℚ)))
 
 /-- The C-level checked Buchberger certificate predicate. -/
 def IsGroebnerBasisWith
     (tag : Type) [CMonomialOrder.CMonomialOrderTag tag (Fin n)]
-    (gens basis : List (CMvPolynomial (Fin n) Rat)) (witness : Witness n) : Prop :=
-  witness.bm.length = basis.length ∧
-  (∀ i : Fin basis.length,
-    IsLinearCombinationWith (basis.get i) gens (witness.bm.getD i.val [])) ∧
-  witness.sr.length = basis.length ∧
-  ∀ i : Fin basis.length,
-    let row := witness.sr.getD i.val []
-    row.length = basis.length ∧
-    ∀ j : Fin basis.length, i < j →
-      Groebner.ReducesToZeroWith tag
-        (CMvPolynomial.sPolynomial'
-          (CMonomialOrder.CMonomialOrderTag.ord (tag := tag) (σ := Fin n))
-          (basis.get i) (basis.get j))
-        basis (row.getD j.val [])
+    (I : List (CMvPolynomial (Fin n) ℚ)) -- the generators of the ideal
+    (G : List (CMvPolynomial (Fin n) ℚ)) -- the candidate basis
+    (witness : Witness n) : Prop :=
+  witness.bm.length = G.length ∧
+  (∀ i : Fin G.length,
+    IsLinearCombinationWith (G.get i) I (witness.bm.getD i.val [])) ∧
+  witness.sr.length = G.length ∧
+  ∀ i : Fin G.length,
+    let R := witness.sr.getD i.val []
+    R.length = G.length ∧
+      ∀ j : Fin G.length, i < j →
+        Groebner.ReducesToZeroWith tag
+          (CMvPolynomial.sPolynomial'
+            (CMonomialOrder.CMonomialOrderTag.ord (tag := tag) (σ := Fin n))
+            (G.get i) (G.get j))
+          G (R.getD j.val [])
 
 instance decidableIsGroebnerBasisWith
     (tag : Type) [CMonomialOrder.CMonomialOrderTag tag (Fin n)]
-    (gens basis : List (CMvPolynomial (Fin n) Rat)) (witness : Witness n) :
-    Decidable (IsGroebnerBasisWith tag gens basis witness) := by
+    (I : List (CMvPolynomial (Fin n) ℚ)) -- the generators of the ideal
+    (G : List (CMvPolynomial (Fin n) ℚ)) -- the candidate basis
+    (witness : Witness n) : Decidable (IsGroebnerBasisWith tag I G witness) := by
   unfold IsGroebnerBasisWith IsLinearCombinationWith
     Groebner.ReducesToZeroWith Groebner.linearCombination
   infer_instance
 
+/-- Soundness: the previous predicate proves `IsGroebnerBasis`. -/
 theorem isGroebnerBasisWith_sound
     {tag : Type} [CMonomialOrder.CMonomialOrderTag tag (Fin n)]
-    {gens basis : List (CMvPolynomial (Fin n) Rat)} {witness : Witness n}
-    (h : IsGroebnerBasisWith tag gens basis witness) :
-    Groebner.IsGroebnerBasis tag gens basis := by
-  rcases h with ⟨_hbm, hmem, _hsr, hspolys⟩
+    {I : List (CMvPolynomial (Fin n) ℚ)} -- the generators of the ideal
+    {G : List (CMvPolynomial (Fin n) ℚ)} -- the candidate basis
+    {witness : Witness n}
+    (h : IsGroebnerBasisWith tag I G witness) : Groebner.IsGroebnerBasis tag I G := by
+  rcases h with ⟨_, h_mem, _, hS⟩
   constructor
   · intro i
-    rcases hmem i with ⟨_, heq⟩
+    -- Since we've got an expression of each g ∈ G as a linear combination of the generators, this
+    -- immediately implies that g ∈ ⟨I⟩.
+    rcases h_mem i with ⟨_, heq⟩
     rw [heq]
-    exact Groebner.linearCombination_mem_idealOf gens (witness.bm.getD i.val [])
+    exact Groebner.linearCombination_mem_idealOf I (witness.bm.getD i.val [])
   · intro i j hij
-    specialize hspolys i
-    dsimp at hspolys
-    rcases hspolys with ⟨hrow, hspolys⟩
-    specialize hspolys j hij
-    exact ⟨(witness.sr.getD i.val []).getD j.val [], hspolys⟩
+    -- The quotients proving that S(gᵢ, gⱼ) reduces to zero are given by `sr[i][j]`, so we just have
+    -- to pull that out...
+    specialize hS i
+    dsimp at hS
+    rcases hS with ⟨_, hS⟩
+    specialize hS j hij
+    exact ⟨(witness.sr.getD i.val []).getD j.val [], hS⟩
 
-/-- A checked Groebner basis in the `CMvPolynomial` layer. -/
+/-- A Groebner basis of an ideal of a polynomial ring. -/
 structure GroebnerBasis
-    (I : List (CMvPolynomial (Fin n) Rat))
-    (tag : Type) [CMonomialOrder.CMonomialOrderTag tag (Fin n)] where
-  basis : List (CMvPolynomial (Fin n) Rat)
+    (tag : Type) [CMonomialOrder.CMonomialOrderTag tag (Fin n)]
+    (I : List (CMvPolynomial (Fin n) ℚ)) where
+  basis : List (CMvPolynomial (Fin n) ℚ)
   h : Groebner.IsGroebnerBasis tag I basis
 
-/-- Compute and check a Groebner basis using the monomial order selected by `tag`.
-
-The fast algorithm is fuel-bounded and untrusted, so this returns `none` if the transported witness
-does not pass the `CMvPolynomial` checker. -/
+/-- Compute a Groebner basis using `untrustedBuchberger`, and feed it through the verification
+    procedure. -/
 @[inline] def buchberger
     (tag : Type)
+    -- Leverage the typeclass inference system to get the monomial order and the associated fast
+    -- monomial order.
     [CMonomialOrder.CMonomialOrderTag tag (Fin n)]
     [CMonomialOrder.FMonomialOrderTag tag n]
-    (I : List (CMvPolynomial (Fin n) Rat)) (fuel : ℕ := 4096) :
-    Option (GroebnerBasis I tag) :=
-  let gensF := I.toArray.map CMvPolynomial.toFMvPolynomial
-  let gbF := FMvPolynomial.untrustedBuchberger'
-    (CMonomialOrder.FMonomialOrderTag.ord (tag := tag) (n := n)) gensF fuel
-  let basis := FMvPolynomial.toCMvPolynomialList gbF.G
+    (I : List (CMvPolynomial (Fin n) ℚ))
+    -- Again, this should be enough fuel, but it is configurable.
+    (fuel : ℕ := 4096) : Option (GroebnerBasis tag I) :=
+  let gb := FMvPolynomial.untrustedBuchberger
+    (CMonomialOrder.FMonomialOrderTag.ord (tag := tag) (n := n))
+    (I.toArray.map CMvPolynomial.toFMvPolynomial)
+    fuel
+  let basis := FMvPolynomial.toCMvPolynomialList gb.G
   let witness : Witness n :=
-    { bm := FMvPolynomial.toCMvPolynomialList₂ gbF.witness.i
-      sr := FMvPolynomial.toCMvPolynomialList₃ gbF.witness.j }
+    { bm := FMvPolynomial.toCMvPolynomialList₂ gb.witness.bm
+      sr := FMvPolynomial.toCMvPolynomialList₃ gb.witness.sr }
   if h : decide (IsGroebnerBasisWith tag I basis witness) = true then
-    some
-      { basis := basis
-        h := by
-          have hs := isGroebnerBasisWith_sound (of_decide_eq_true h)
-          simpa using hs }
+    some {
+      basis := basis
+      h     := by
+        have hs := isGroebnerBasisWith_sound (of_decide_eq_true h)
+        simpa using hs
+    }
   else
     none
 

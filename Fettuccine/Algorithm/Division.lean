@@ -5,12 +5,13 @@ import Mathlib.Algebra.Field.Basic
 /-!
 # The Division Algorithm for Multivariate Polynomials
 
-This file implements the division algorithm for `FMvPolynomial R` with respect to a monomial order.
+This file implements the simultaneous multiple-divisor division algorithm for `FMvPolynomial R` with
+respect to a monomial order.
 
 ## Definitions
 
-* `untrustedMvDivide ord f gs (fuel)` : divides the polynomial `f` by the divisors `gs` with
-  respect to the monomial order `ord`, constrained by `fuel` (default: 4096).
+* `untrustedMvDivide ord f gs fuel` : divides the polynomial `f` by the divisors `gs` with respect
+  to the monomial order `ord`, constrained by `fuel` (default: 4096).
 -/
 
 namespace FMonomial
@@ -27,6 +28,29 @@ def div (m₁ m₂ : FMonomial n) : Option (FMonomial n) :=
     some <| Vector.zipWith Nat.sub m₁ m₂
   else
     none
+
+lemma dvd_iff_div_eq (m₁ m₂ : FMonomial n) : dvd m₂ m₁ = true ↔ (div m₁ m₂).isSome := by
+  simp [div]
+
+lemma not_dvd_iff_div_eq (m₁ m₂ : FMonomial n) :
+    div m₁ m₂ = none ↔ dvd m₂ m₁ = false := by
+  simp [div]
+
+lemma div_wellDefined {m₁ m₂ : FMonomial n} (h : m₂.dvd m₁) :
+    ∃ q, div m₁ m₂ = some q ∧ FMonomial.add q m₂ = m₁ := by
+  refine ⟨Vector.zipWith Nat.sub m₁ m₂, by simp [div, h], ?_⟩
+  apply Vector.ext
+  -- By assumption, each component of `m₂` is less than or equal to the corresponding component of
+  -- `m₁`.
+  have h_all : (Vector.zipWith Nat.ble m₂ m₁).all id = true := by
+    simpa [FMonomial.dvd] using (show m₂.dvd m₁ = true by simpa using h)
+  -- Pass to a component-wise statement.
+  intro i hi
+  have hle : m₂[i] ≤ m₁[i] := by
+    exact Nat.ble_eq.mp <| by
+      simpa [Vector.getElem_zipWith] using
+        (Array.all_eq_true.mp h_all) i (by simpa using hi)
+  simp [FMonomial.add, Vector.getElem_zipWith, hle, Nat.sub_add_cancel]
 
 end FMonomial
 
@@ -79,5 +103,12 @@ where
           let f'  := sub f (mulMonomial m c g)
           let qs' := qs.set! i (add qs[i]! #[(m, c)])
           loop fuel f' qs' r
+
+/-- Zero divided by anything is zero; an easy statement to prove even for this implementation of
+    Buchberger's algorithm. -/
+lemma untrustedMvDivide_zero (ord : FMonomialOrder n) (gs : Array (FMvPolynomial n R)) :
+    untrustedMvDivide ord zero gs =
+      (Array.replicate gs.size zero, zero) := by
+  rfl
 
 end FMvPolynomial

@@ -1,7 +1,7 @@
 import Fettuccine.CMonomialOrder
-import Mathlib.Data.Finset.Sort
 
-/-- An instance of `Repr` for `Fin n`, displaying as x₀, x₁, etc. -/
+/-- An instance of `Repr` for `Fin n`, displaying elements as x₀, x₁, etc. (This is probably
+    preferable to the instance inherited from ℕ...) -/
 instance Fin.fallbackRepr {n : ℕ} : Repr (Fin n) where
   reprPrec i _ := "x" ++ String.map digits (toString i.val)
 where
@@ -23,7 +23,9 @@ instance : Repr (CMonomial σ) where
         | e => some f!"{reprPrec x 0}^{e}"
     if terms.isEmpty then "1"
     else
-      Std.Format.joinSep terms ""
+      -- This is a bit ugly, but means we can copy-paste into external computer algebra systems like
+      -- Macaulay2 directly.
+      Std.Format.joinSep terms "*"
 
 variable {R : Type*} [DecidableEq R] [CommSemiring R] [Repr R]
 

@@ -11,10 +11,10 @@ of Buchberger's criterion.
 ## Definitions
 
 * `CMvPolynomial.sPolynomial ord f g` : the S-polynomial of `f` and `g`.
-* `CMvPolynomial.sPolynomial' ord f g` : a computation-friendly S-polynomial.
 * `Groebner.linearCombination gs qs` : the linear combination `∑ᵢ gsᵢ * qsᵢ`.
 * `Groebner.ReducesToZero tag f gs` : `f` reduces to zero modulo `gs`.
-* `Groebner.IsGroebnerBasis tag I basis` : Buchberger's criterion plus ideal membership.
+* `Groebner.IsGroebnerBasis tag I basis` : the statement of Buchberger's characterization of Gröbner
+  bases, with respect to the monomial order selected by `tag`.
 -/
 
 open CMonomialOrder
@@ -46,10 +46,11 @@ def sPolynomial (f g : CMvPolynomial σ R) : CMvPolynomial σ R :=
   let mg  := (CMonomial.div γ lm_g).getD 0
   ofMonomial mf (leadingCoefficient' ord g) * f - ofMonomial mg (leadingCoefficient' ord f) * g
 
-theorem sPolynomial_eq_sPolynomial' (f g : CMvPolynomial σ R) :
+/-- The definitions of the S-polynomial coincide. -/
+lemma sPolynomial_eq_sPolynomial' (f g : CMvPolynomial σ R) :
     sPolynomial ord f g = sPolynomial' ord f g := by
-  simp [sPolynomial, sPolynomial', leadingMonomial_eq_leadingMonomial' ord f,
-    leadingMonomial_eq_leadingMonomial' ord g, leadingCoefficient, leadingCoefficient']
+  simp [sPolynomial, sPolynomial', leadingCoefficient, leadingCoefficient',
+    leadingMonomial_eq_leadingMonomial']
 
 end CMvPolynomial
 
@@ -67,22 +68,20 @@ private abbrev taggedOrder (tag : Type v) [CMonomialOrder.CMonomialOrderTag tag 
   CMonomialOrder.CMonomialOrderTag.ord (tag := tag) (σ := σ)
 
 /-- A polynomial linear combination, truncating if the lists have different lengths. -/
-def linearCombination :
-    List (CMvPolynomial σ R) → List (CMvPolynomial σ R) → CMvPolynomial σ R
+def linearCombination : List (CMvPolynomial σ R) → List (CMvPolynomial σ R) → CMvPolynomial σ R
   | [], _ => 0
   | _, [] => 0
   | g :: gs, q :: qs => g * q + linearCombination gs qs
 
 /-- `qs` witnesses that `f` reduces to zero modulo `gs` under `ord`. -/
-def ReducesToZeroWith
-    (tag : Type v) [CMonomialOrder.CMonomialOrderTag tag σ]
+def ReducesToZeroWith (tag : Type v) [CMonomialOrder.CMonomialOrderTag tag σ]
     (f : CMvPolynomial σ R)
     (gs qs : List (CMvPolynomial σ R)) : Prop :=
   qs.length = gs.length ∧
-  f = linearCombination gs qs ∧
-  ∀ gq ∈ List.zip gs qs,
-    (taggedOrder tag).toSyn (CMvPolynomial.leadingMonomial' (taggedOrder tag) (gq.1 * gq.2)) ≤
-      (taggedOrder tag).toSyn (CMvPolynomial.leadingMonomial' (taggedOrder tag) f)
+    f = linearCombination gs qs ∧
+      ∀ gq ∈ List.zip gs qs,
+        (taggedOrder tag).toSyn (CMvPolynomial.leadingMonomial' (taggedOrder tag) (gq.1 * gq.2)) ≤
+          (taggedOrder tag).toSyn (CMvPolynomial.leadingMonomial' (taggedOrder tag) f)
 
 /-- `f` reduces to zero modulo `gs` under `ord`. -/
 def ReducesToZero
@@ -96,34 +95,55 @@ def idealOf (I : List (CMvPolynomial σ R)) : Ideal (CMvPolynomial σ R) :=
   Ideal.span { f | f ∈ I }
 
 /-- The mathematically clean C-level Buchberger criterion. -/
-def IsGroebnerBasis
-    (tag : Type v) [CMonomialOrder.CMonomialOrderTag tag σ]
+def IsGroebnerBasis (tag : Type v) [CMonomialOrder.CMonomialOrderTag tag σ]
     (I : List (CMvPolynomial σ R))
     (basis : List (CMvPolynomial σ R)) : Prop :=
   (∀ i : Fin basis.length, basis.get i ∈ idealOf I) ∧
-  ∀ i j : Fin basis.length, i < j →
-    ReducesToZero tag
-      (CMvPolynomial.sPolynomial' (taggedOrder tag) (basis.get i) (basis.get j)) basis
+    ∀ i j : Fin basis.length, i < j →
+      ReducesToZero tag
+        (CMvPolynomial.sPolynomial' (taggedOrder tag) (basis.get i) (basis.get j)) basis
 
 omit [DecidableEq R] in
-lemma linearCombination_mem_idealOf
-    (gens coeffs : List (CMvPolynomial σ R)) :
-    linearCombination gens coeffs ∈ idealOf gens := by
-  induction gens generalizing coeffs with
+/-- A linear combination of ideal generators lies in the ideal. -/
+lemma linearCombination_mem_idealOf (I : List (CMvPolynomial σ R))
+    (coeffs : List (CMvPolynomial σ R)) :
+    linearCombination I coeffs ∈ idealOf I := by
+  induction I generalizing coeffs with
   | nil =>
-      cases coeffs <;> simp [linearCombination, idealOf]
-  | cons g gens ih =>
-      cases coeffs with
-      | nil =>
-          simp [linearCombination, idealOf]
-      | cons c coeffs =>
-          simp only [linearCombination]
-          apply Ideal.add_mem
-          · have hgspan : g ∈ Ideal.span
-                ({ f | f ∈ g :: gens } : Set (CMvPolynomial σ R)) :=
-              Ideal.subset_span
-                (show g ∈ ({ f | f ∈ g :: gens } : Set (CMvPolynomial σ R)) by simp)
-            exact Ideal.mul_mem_right c _ hgspan
-          · exact Ideal.span_mono (by intro f hf; exact List.mem_cons_of_mem g hf) (ih coeffs)
+    cases coeffs <;> simp [linearCombination, idealOf]
+  | cons g I ih =>
+    cases coeffs with
+    | nil           => simp [linearCombination, idealOf]
+    | cons c coeffs =>
+      -- FIXME: This proof was written with a lot of help from AI, and is pretty unreadable. Can we
+      -- clean it up a bunch?
+      simp only [linearCombination]
+      apply Ideal.add_mem
+      · have hg_span : g ∈ Ideal.span ({ f | f ∈ g :: I } : Set (CMvPolynomial σ R)) :=
+          Ideal.subset_span
+            (show g ∈ ({ f | f ∈ g :: I } : Set (CMvPolynomial σ R)) by simp)
+        exact Ideal.mul_mem_right c _ hg_span
+      · exact Ideal.span_mono (by intro f hf; exact List.mem_cons_of_mem g hf) (ih coeffs)
+
+theorem ReducesToZero_nil_iff [CMonomialOrder.CMonomialOrderTag tag σ]
+    (f : CMvPolynomial σ R) : ReducesToZero tag f [] ↔ f = 0 := by
+  constructor
+  · rintro ⟨qs, h_len, h_eq, -⟩
+    cases qs with
+    | nil       => simpa [linearCombination] using h_eq
+    | cons q qs => simp at h_len
+  · intro hf
+    exact ⟨[], by simp [ReducesToZeroWith, linearCombination, hf]⟩
+
+omit [DecidableEq R] in
+/-- The ideal generated by the empty set is the zero ideal. -/
+@[simp] lemma idealOf_nil : idealOf ([] : List (CMvPolynomial σ R)) = ⊥ := by
+  simp [idealOf]
+
+omit [DecidableEq R] in
+/-- A generator of the ideal is in the ideal. -/
+theorem mem_idealOf_cons {g : CMvPolynomial σ R} {I : List (CMvPolynomial σ R)} :
+    g ∈ idealOf (g :: I) := by
+  exact Ideal.subset_span (by simp)
 
 end Groebner

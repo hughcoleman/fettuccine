@@ -1,4 +1,5 @@
 import Fettuccine.Algorithm.Division
+import Mathlib.Algebra.Field.Rat
 
 /-!
 # Buchberger's Algorithm
@@ -21,8 +22,8 @@ variable {R : Type*} [DecidableEq R] [Zero R] [AddGroup R] [DivisionRing R]
 
 /-- The **S-polynomial** of two (non-zero) polynomials `f` and `g` with respect to the monomial
     order `ord`. -/
--- S(f, g) = (l / lm_f) * lc_g * f - (l / lm_g) * lc_f * g
---         = lcm(lm_f, lm_g) / lm_f * lc_g * f - lcm(lm_f, lm_g) / lm_g * lc_f * g
+-- S(f, g) = lcm(lm_f, lm_g) / lm_f * lc_g * f - lcm(lm_f, lm_g) / lm_g * lc_f * g
+--         = (l / lm_f) * lc_g * f - (l / lm_g) * lc_f * g
 def sPolynomial (ord : FMonomialOrder n) (f g : FMvPolynomial n R) : FMvPolynomial n R :=
   match f.leadingTerm ord, g.leadingTerm ord with
   | some (lm_f, lc_f), some (lm_g, lc_g) =>
@@ -78,8 +79,8 @@ variable (ord : FMonomialOrder n)
 
 /-- The information required to witness a Gröbner basis. -/
 structure Witness (n : ℕ) (R : Type*) where
-  i : Array (Array (FMvPolynomial n R))
-  j : Array (Array (Array (FMvPolynomial n R)))
+  bm : Array (Array (FMvPolynomial n R))
+  sr : Array (Array (Array (FMvPolynomial n R)))
 
 /-- A proposed Gröbner basis, alongside computational witnesses that can be used to certify the
     computation. -/
@@ -103,7 +104,7 @@ def AugmentedBasis.basisCoefficients {n' n : ℕ} (augmentedBasis : AugmentedBas
   augmentedBasis.map Prod.snd
 
 /-- **Buchberger's algorithm** for computing a Gröbner basis. -/
-def untrustedBuchberger' (I : Array (FMvPolynomial n R))
+def untrustedBuchberger (I : Array (FMvPolynomial n R))
     -- As with `untrustedMvDivide`, this should be more than enough fuel for any practical example.
     (fuel : ℕ := 4096) : CandidateGroebnerBasis n R :=
   -- The key is to keep track of expressions of each (added) basis element as a linear combination
@@ -204,7 +205,7 @@ set_option linter.style.nativeDecide false
 private def f₁ : S := #[(m 1 1 0, 1), (m 0 0 0, -1)] -- xy - 1
 private def f₂ : S := #[(m 2 0 0, 1), (m 0 1 0, -1)] -- x² - y
 private def gb₁ : CandidateGroebnerBasis 3 ℚ :=
-  untrustedBuchberger' FMonomialOrder.lex #[f₁, f₂]
+  untrustedBuchberger FMonomialOrder.lex #[f₁, f₂]
 
 -- This is not a reduced Gröbner basis, but this is a Gröbner basis nonetheless as can be confirmed
 -- by Macaulay2.
@@ -220,7 +221,7 @@ private def g₁ : S := #[(m 1 1 0, 1), (m 0 0 1, -1)] -- xy - z
 private def g₂ : S := #[(m 1 0 1, 1), (m 0 1 0, -1)] -- xz - y
 private def g₃ : S := #[(m 1 0 0, -1), (m 0 1 1, 1)] -- -x + yz
 private def gb₂ : CandidateGroebnerBasis 3 ℚ :=
-  untrustedBuchberger' FMonomialOrder.grevlex #[g₁, g₂, g₃]
+  untrustedBuchberger FMonomialOrder.grevlex #[g₁, g₂, g₃]
 
 -- This one is in fact the reduced Gröbner basis, which can be confirmed by Macaulay2.
 example : gb₂.G = #[
