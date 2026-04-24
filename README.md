@@ -83,7 +83,7 @@ This is the interface against which computed candidate bases are checked.
 ### Fast, Executable Layer
 
 The `Fettuccine/Algorithm/` folder contains the fast array-based implementation intended for `#eval` and `native_decide`.
-Here, monomials and polynomials are represented by `FMonomial` and `FMvPolynomial`, together with executable monomial orders in [FMonomialOrder.lean](Algorithm/FMonomialOrder.lean), executable division in [Division.lean](Fettuccine/Algorithm/Division.lean), and Buchberger's algorithm in [Buchberger.lean](Fettuccine/Algorithm/Buchberger.lean).
+Here, monomials and polynomials are represented by `FMonomial` and `FMvPolynomial`, together with executable monomial orders in [FMonomialOrder.lean](Fettuccine/Algorithm/FMonomialOrder.lean), executable division in [Division.lean](Fettuccine/Algorithm/Division.lean), and Buchberger's algorithm in [Buchberger.lean](Fettuccine/Algorithm/Buchberger.lean).
 Its primary routines are `sPolynomial`, `untrustedMvDivide`, and `untrustedBuchberger`.
 
 ### Bridging Interface
