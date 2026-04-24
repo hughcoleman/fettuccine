@@ -122,7 +122,7 @@ def y : CMvPolynomial σ ℚ := CMvPolynomial.X 1
 def z : CMvPolynomial σ ℚ := CMvPolynomial.X 2
 
 -- I₁ = ⟨xy - 1, x² - y⟩
-def I₁ : List (CMvPolynomial σ ℚ) := [x * y - 1, x^2 - y]
+def I₁ : List (CMvPolynomial σ ℚ) := [x*y - 1, x^2 - y]
 def gb₁? : Option (Buchberger.GroebnerBasis CMonomialOrder.LexOrder I₁) :=
   Buchberger.buchberger _ I₁ 32
 def gb₁ := gb₁?.get (by native_decide)
@@ -133,7 +133,7 @@ example : Groebner.IsGroebnerBasis CMonomialOrder.LexOrder I₁ gb₁.basis :=
 #eval gb₁.basis
 
 -- I₂ = ⟨xy - z, xz - y, yz - x⟩
-def I₂ : List (CMvPolynomial σ ℚ) := [x * y - z, x * z - y, y * z - x]
+def I₂ : List (CMvPolynomial σ ℚ) := [x*y - z, x*z - y, y*z - x]
 def gb₂? : Option (Buchberger.GroebnerBasis CMonomialOrder.GrevlexOrder I₂) :=
   Buchberger.buchberger _ I₂ 32
 def gb₂ := gb₂?.get (by native_decide)
